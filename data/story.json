@@ -1,0 +1,94 @@
+{
+  "title": "O Último Dia da Democracia",
+  "setting": "República de Aurora, cidade de Lúmen. Uma história fictícia.",
+  "chapters": [
+    {
+      "chapter": 1,
+      "time": "16:00",
+      "title": "O envelope sem remetente",
+      "body": "A chuva transforma as janelas da redação em mapas. Você está terminando o último plantão no jornal Farol quando um envelope desliza por baixo da porta. Dentro há cópias de um decreto: à meia-noite, a assembleia será fechada por tempo indeterminado.\n\nNo verso, uma frase escrita à mão: ‘Eles precisam que ninguém esteja olhando’. Sua editora, Lia, lê em silêncio. A primeira página pode acordar a cidade — ou entregar quem tentou avisá-la. O telefone toca. Uma voz pergunta se você recebeu alguma coisa.",
+      "choices": [
+        {"label": "Publicar o alerta agora", "hint": "A cidade precisa saber. A redação ficará exposta.", "effects": {"voz": 14, "provas": 4, "risco": 13}, "after": "O alerta chega aos ônibus antes do fim da tarde. Uma viatura estaciona em frente ao Farol."},
+        {"label": "Conferir a origem do decreto", "hint": "Rastrear o documento leva tempo, mas fortalece a investigação.", "effects": {"voz": -5, "provas": 14, "risco": 3}, "after": "Um carimbo quase apagado liga o envelope ao arquivo público. Você guarda o original e divulga apenas uma nota curta."},
+        {"label": "Acionar a rede de vizinhos", "hint": "Espalhar o aviso discretamente protege as fontes.", "effects": {"voz": 6, "provas": -5, "risco": -5}, "after": "O aviso circula de porta em porta, sem o nome do jornal. Cada pessoa conta a uma segunda pessoa."}
+      ]
+    },
+    {
+      "chapter": 2,
+      "time": "17:00",
+      "title": "A mulher do arquivo",
+      "body": "No café da estação, uma arquivista chamada Inês mantém as mãos em volta de uma xícara fria. Ela reconheceu o número do decreto na sua mensagem. Viu caixas de documentos serem retiradas do arquivo durante a madrugada.\n\nInês tem a lista de quem autorizou a operação. Também tem uma filha esperando na escola. ‘Se meu nome aparecer, eles sabem onde me encontrar’, diz. Na rua, alto-falantes anunciam uma cerimônia nacional para aquela noite. Você pode ouvir o relógio da estação entre as frases.",
+      "choices": [
+        {"label": "Transmitir o depoimento ao vivo", "hint": "Uma voz humana torna a ameaça real, mas revela a fonte.", "effects": {"voz": 13, "provas": 8, "risco": 15}, "after": "O depoimento interrompe a programação das rádios. Inês desliga o telefone e deixa a estação por outra saída."},
+        {"label": "Registrar tudo sem identificar Inês", "hint": "Preservar a testemunha e autenticar a lista.", "effects": {"voz": -4, "provas": 15, "risco": 3}, "after": "Você fotografa a lista, verifica assinaturas e combina um canal seguro de contato. Inês consegue buscar a filha."},
+        {"label": "Priorizar a saída de Inês da cidade", "hint": "Uma pessoa a salvo vale o atraso na apuração.", "effects": {"voz": 3, "provas": -6, "risco": -9}, "after": "Um motorista conhecido leva Inês e a filha para a casa de parentes. A lista fica para trás, mas elas não."}
+      ]
+    },
+    {
+      "chapter": 3,
+      "time": "18:00",
+      "title": "A praça antes das sirenes",
+      "body": "As lojas da Praça das Pontes fecham mais cedo. Há gente chegando com velas, sem combinar com ninguém. Um estudante reconhece o símbolo do Farol na sua mochila e pede que você diga à cidade onde se reunir.\n\nNa tela de uma televisão, o porta-voz do governo garante que a assembleia está ‘apenas em reforma’. Atrás dele, você reconhece as caixas que Inês descreveu. Perto da praça, a rádio comunitária tem um transmissor emprestado. Na outra direção, o arquivo ainda está aberto por vinte minutos.",
+      "choices": [
+        {"label": "Convocar uma vigília na praça", "hint": "Reunir pessoas dá força ao aviso e atrai vigilância.", "effects": {"voz": 15, "provas": -3, "risco": 11}, "after": "As primeiras velas ocupam os degraus da praça. A câmera de uma viatura acompanha os rostos na multidão."},
+        {"label": "Entrar no arquivo antes que feche", "hint": "Os registros podem confirmar o que a televisão esconde.", "effects": {"voz": -7, "provas": 17, "risco": 8}, "after": "Você encontra o registro de retirada das caixas e fotografa cada página. Na saída, um segurança anota seu nome."},
+        {"label": "Distribuir instruções de cuidado", "hint": "Organizar abrigo e pontos de encontro sem concentração.", "effects": {"voz": 7, "provas": -6, "risco": -7}, "after": "Padarias e oficinas combinam manter as portas abertas. As pessoas recebem endereços de abrigo em pequenos cartões."}
+      ]
+    },
+    {
+      "chapter": 4,
+      "time": "19:00",
+      "title": "O sinal interrompido",
+      "body": "Os celulares ficam mudos ao mesmo tempo. Depois, as mensagens voltam a chegar — só as oficiais. Na redação, Lia já puxou um rádio antigo debaixo da mesa. O Farol tem bateria para algumas horas, papel para uma edição pequena e acesso a uma linha fixa esquecida.\n\nUm técnico avisa: consegue religar o transmissor no alto da torre, mas o sinal entregará a localização. Uma colega no exterior pede que você mande tudo o que reuniu antes que a linha também caia. Você não consegue fazer as duas coisas a tempo.",
+      "choices": [
+        {"label": "Ligar o transmissor da torre", "hint": "Romper o bloqueio põe sua localização no mapa.", "effects": {"voz": 16, "provas": -2, "risco": 15}, "after": "A voz de Lia atravessa o chiado. Do alto da torre, você vê veículos mudando de direção na avenida."},
+        {"label": "Enviar uma cópia verificada ao exterior", "hint": "Proteger os documentos fora do alcance do bloqueio.", "effects": {"voz": -5, "provas": 13, "risco": -2}, "after": "A confirmação chega segundos antes do silêncio na linha. Uma cópia completa existe do outro lado da fronteira."},
+        {"label": "Imprimir boletins para os bairros", "hint": "O papel circula devagar e sem revelar um sinal.", "effects": {"voz": 8, "provas": -4, "risco": -6}, "after": "A impressora aquece a sala. Entregadores levam boletins dobrados entre encomendas e sacos de pão."}
+      ]
+    },
+    {
+      "chapter": 5,
+      "time": "20:00",
+      "title": "A oferta",
+      "body": "Um assessor aparece no portão da redação, sem guarda-chuva. Diz que o decreto é provisório. Diz que sua reportagem pode causar pânico. Por fim, oferece um carro para você e Lia deixarem a cidade — desde que entreguem os originais e publiquem uma retratação.\n\nAntes de ir embora, ele deixa escapar um detalhe: o decreto será assinado numa reunião fechada às dez. Na esquina, um velho conhecido faz sinal. Ele conhece um funcionário que talvez tenha acesso à ata. O assessor ainda espera sua resposta.",
+      "choices": [
+        {"label": "Denunciar a tentativa de censura", "hint": "A oferta vira notícia; a pressão sobre o Farol aumenta.", "effects": {"voz": 12, "provas": 5, "risco": 14}, "after": "A gravação da oferta passa de rádio em rádio. O assessor não volta, mas o carro continua parado na esquina."},
+        {"label": "Ganhar tempo e buscar a ata", "hint": "Fingir indecisão abre uma janela para investigar.", "effects": {"voz": -6, "provas": 16, "risco": 4}, "after": "Você pede uma hora para pensar. Enquanto o assessor espera, seu contato confirma o número da sala e a pauta da reunião."},
+        {"label": "Recusar e retirar a equipe do prédio", "hint": "Levar as pessoas a um lugar seguro antes de continuar.", "effects": {"voz": 2, "provas": -7, "risco": -13}, "after": "A redação fica vazia pela primeira vez em décadas. Lia leva o rádio; você leva os cadernos. O jornal cabe numa mochila."}
+      ]
+    },
+    {
+      "chapter": 6,
+      "time": "21:00",
+      "title": "As vozes da ponte",
+      "body": "A Ponte Velha divide Lúmen em duas margens. De um lado, gente que tenta chegar à praça; do outro, uma barreira que impede a passagem. Um boato afirma que os hospitais fecharam. Outro diz que a assembleia já foi tomada. Ninguém sabe no que acreditar.\n\nUma médica entrega a você uma relação dos atendimentos da noite: os hospitais seguem abertos. Ela pede que a informação chegue às famílias. Entre os papéis há também um registro de ambulâncias requisitadas pelo gabinete, muito antes do primeiro anúncio oficial.",
+      "choices": [
+        {"label": "Levar a transmissão para a ponte", "hint": "Unir as margens aumenta o alcance e a exposição.", "effects": {"voz": 14, "provas": 3, "risco": 12}, "after": "As duas margens repetem a informação sobre os hospitais. Pela primeira vez, os boatos perdem espaço para uma voz reconhecível."},
+        {"label": "Conferir o registro das ambulâncias", "hint": "A cronologia pode demonstrar que tudo foi planejado.", "effects": {"voz": -5, "provas": 15, "risco": 5}, "after": "Os horários coincidem com a retirada das caixas. Você consegue ligar três ordens diferentes à mesma assinatura."},
+        {"label": "Abrir um corredor com voluntários", "hint": "Ajudar as famílias sem transformar a ponte num palco.", "effects": {"voz": 7, "provas": -5, "risco": -8}, "after": "A médica atravessa com uma pequena equipe. As famílias recebem notícias, água e um caminho de volta para casa."}
+      ]
+    },
+    {
+      "chapter": 7,
+      "time": "22:00",
+      "title": "A sala sem janelas",
+      "body": "Seu contato deixa uma pasta na cabine de uma oficina. A ata confirma: a reunião começou antes do anúncio de qualquer emergência. O plano não nasceu naquela noite. Há uma lista de emissoras a fechar e, entre elas, o nome do Farol circulado duas vezes.\n\nUma folha parece ter sido acrescentada depois. Nela, faltam assinaturas. Publicar tudo agora pode dar a manchete definitiva — e uma única página falsa pode desacreditar o restante. Lia olha o relógio. A bateria do rádio começa a piscar.",
+      "choices": [
+        {"label": "Ler a pasta inteira na transmissão", "hint": "O impacto é imediato, mesmo com uma página em dúvida.", "effects": {"voz": 13, "provas": -10, "risco": 13}, "after": "A leitura interrompe o discurso oficial em vários bairros. O governo concentra a resposta na página sem assinatura."},
+        {"label": "Separar o que pode ser comprovado", "hint": "Publicar menos, com cada afirmação sustentada.", "effects": {"voz": -4, "provas": 18, "risco": 3}, "after": "Você deixa a folha duvidosa de fora. A reportagem ganha notas, fontes e uma cronologia que pode ser conferida."},
+        {"label": "Entregar cópias a grupos de confiança", "hint": "Dividir a guarda dos documentos antes do fim da noite.", "effects": {"voz": 6, "provas": -3, "risco": -9}, "after": "Uma professora, um motorista e uma bibliotecária saem com cópias diferentes. Ninguém carrega o arquivo inteiro."}
+      ]
+    },
+    {
+      "chapter": 8,
+      "time": "23:00",
+      "title": "A última hora",
+      "body": "O sino da assembleia marca onze horas. Falta uma hora para o decreto. Das janelas, vêm pontos de luz; dos rádios, fragmentos do que você conseguiu contar. Algumas vozes repetem suas palavras. Outras perguntam onde estão as provas.\n\nLia encontra uma última bateria. Ela sustenta uma transmissão curta. Você pode usar esse tempo para chamar a cidade, organizar o arquivo ou garantir que ninguém da equipe fique para trás. Não haverá outra edição esta noite. Você respira e se aproxima do microfone.",
+      "choices": [
+        {"label": "Chamar a cidade a permanecer presente", "hint": "A última transmissão pode virar um compromisso coletivo.", "effects": {"voz": 16, "provas": 2, "risco": 12}, "after": "O chamado fica no ar até o último segundo da bateria."},
+        {"label": "Transmitir a cronologia e as provas", "hint": "Nomes, datas e documentos: deixar um registro verificável.", "effects": {"voz": -3, "provas": 16, "risco": 4}, "after": "Você lê cada data devagar, para quem escuta poder anotar."},
+        {"label": "Levar a equipe à estação da fronteira", "hint": "Preservar as pessoas que poderão contar o dia seguinte.", "effects": {"voz": -9, "provas": -4, "risco": -15}, "after": "A última pessoa entra no carro antes que o relógio vire."}
+      ]
+    }
+  ]
+}

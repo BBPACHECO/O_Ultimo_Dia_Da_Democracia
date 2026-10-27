@@ -1,0 +1,8 @@
+.godot/
+builds/
+.DS_Store
+*.keystore
+*.jks
+.env
+.env.*
+!.env.example

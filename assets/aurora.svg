@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="480" viewBox="0 0 960 480">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#173b45"/><stop offset="1" stop-color="#0d2029"/></linearGradient>
+    <radialGradient id="glow"><stop stop-color="#dba365" stop-opacity=".35"/><stop offset="1" stop-color="#dba365" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="960" height="480" fill="url(#sky)"/>
+  <ellipse cx="682" cy="190" rx="235" ry="170" fill="url(#glow)"/>
+  <circle cx="694" cy="115" r="36" fill="#e9cb92"/>
+  <circle cx="709" cy="102" r="35" fill="#18363d"/>
+  <g fill="#d4c6a2" opacity=".5"><circle cx="113" cy="78" r="1.7"/><circle cx="266" cy="135" r="1.3"/><circle cx="467" cy="52" r="1.7"/><circle cx="824" cy="60" r="1.5"/><circle cx="887" cy="174" r="1.5"/><circle cx="574" cy="138" r="1.3"/><circle cx="343" cy="61" r="1.1"/></g>
+  <g fill="#24444b"><path d="M0 340V260H45V230H93V310H137V215H173V193H196V217H220V288H250V246H307V307H359V252H398V227H439V284H485V237H530V277H588V213H628V268H677V243H724V281H775V235H825V294H867V250H917V317H960V480H0Z"/></g>
+  <g fill="#112b34"><path d="M0 392V323H62V291H119V356H159V304H215V360H259V280H313V324H358V359H411V317H459V282H500V343H543V298H594V353H645V318H707V292H760V350H806V306H873V357H920V329H960V480H0Z"/></g>
+  <g fill="#0b1d26"><path d="M353 480V350H376V300H394V252H415V197L437 178V165H443V178L465 197V252H486V300H505V350H530V480Z"/><path d="M393 252H487V261H393Z"/><path d="M374 301H506V310H374Z"/><path d="M351 350H531V362H351Z"/></g>
+  <circle cx="440" cy="224" r="23" fill="#c7955c"/>
+  <circle cx="440" cy="224" r="19" fill="#172e35"/>
+  <path d="M440 210V225L453 231" fill="none" stroke="#eed3a0" stroke-width="3" stroke-linecap="round"/>
+  <g fill="#bd915e"><path d="M413 276h9v15h-9zM436 276h9v15h-9zM459 276h9v15h-9zM409 326h11v19h-11zM435 326h11v19h-11zM461 326h11v19h-11z"/><path d="M47 350h8v13h-8zM84 318h8v13h-8zM179 333h8v13h-8zM280 310h8v13h-8zM288 346h8v13h-8zM564 327h8v13h-8zM662 347h8v13h-8zM727 322h8v13h-8zM834 333h8v13h-8zM854 361h8v13h-8zM937 356h8v13h-8z" opacity=".7"/></g>
+  <path d="M0 421Q227 401 440 427T960 420V480H0Z" fill="#091922"/>
+  <path d="M0 450Q227 430 440 456T960 449" fill="none" stroke="#c7955c" stroke-width="1" opacity=".3"/>
+  <g fill="#0b1d26"><path d="M803 278h4v137h-4z"/><path d="M807 280q37-27 65-10v43q-31-16-65 8Z"/></g>
+</svg>

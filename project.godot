@@ -1,0 +1,33 @@
+; Projeto nativo Godot. Abra este arquivo no editor para desenvolver.
+config_version=5
+
+[application]
+config/name="O Último Dia da Democracia"
+config/description="Um jogo narrativo de escolhas, feito para jogar offline no celular."
+config/version="0.1.0"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.6", "GL Compatibility")
+config/icon="res://assets/icon.svg"
+config/auto_accept_quit=false
+
+[display]
+window/size/viewport_width=540
+window/size/viewport_height=960
+window/size/window_width_override=432
+window/size/window_height_override=768
+window/stretch/mode="canvas_items"
+window/handheld/orientation=1
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+textures/default_filters/use_nearest_mipmap_filter=false
+environment/defaults/default_clear_color=Color(0.039, 0.071, 0.094, 1)
+
+[input_devices]
+pointing/emulate_mouse_from_touch=true
+pointing/emulate_touch_from_mouse=true
+
+[audio]
+driver/enable_input=false

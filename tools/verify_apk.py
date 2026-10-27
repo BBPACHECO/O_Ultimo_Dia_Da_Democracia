@@ -57,6 +57,7 @@ with zipfile.ZipFile(apk) as z:
     scene = re.search(r'path="res://([^"]+)"', remap)
     require(scene is not None and 'assets/' + scene[1] in names, 'cena compilada ausente')
     require('assets/data/story.json' in names, 'narrativa ausente')
+    require('assets/assets/fonts/LICENSE-DejaVu.txt' in names, 'licença das fontes ausente')
     story = json.loads(z.read('assets/data/story.json'))
     require(len(story.get('chapters', [])) == 8, 'narrativa incompleta')
     for abi in ['arm64-v8a', 'armeabi-v7a']:

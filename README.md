@@ -8,6 +8,14 @@ Na cidade fictícia de Aurora, você assume o último plantão de uma redação 
 
 É um protótipo jogável original. O cenário e os personagens são fictícios.
 
+## Baixar no celular
+
+[Baixar APK de teste v0.1.0 para Android](https://github.com/BBPACHECO/O_Ultimo_Dia_Da_Democracia/raw/refs/heads/main/downloads/o-ultimo-dia-v0.1.0.apk)
+
+Abra o link no celular, baixe o arquivo e toque nele para instalar. Se o Android solicitar, autorize a instalação para o aplicativo usado para abrir o APK. Compatível com Android 7.0 ou superior, ARMv7/ARM64 e OpenGL ES 3.0. O jogo funciona offline depois de instalado. A assinatura é de desenvolvimento.
+
+O APK e seu checksum SHA-256 ficam na pasta [`downloads/`](downloads/). A instalação e o uso em um aparelho físico ainda precisam ser verificados.
+
 ## Desenvolver
 
 Abra `project.godot` no **Godot 4.6.3 estável**, edição padrão (não precisa de .NET), e pressione F6 na cena principal ou F5 no projeto. A janela de desenvolvimento simula a tela vertical do celular. O jogo instalado usa a interface e o renderizador nativos do engine.

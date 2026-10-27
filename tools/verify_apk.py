@@ -45,7 +45,7 @@ for index, line in enumerate(lines):
                 require(target is not None and target[1] == 'com.godot.game.GodotApp', 'alias aponta para atividade incorreta')
             break
 require(launcher is not None, 'sem atividade inicial exportada com MAIN/LAUNCHER')
-require("versionName='0.2.0'" in badging and "versionCode='2'" in badging, 'versão inesperada')
+require("versionName='0.3.0'" in badging and "versionCode='3'" in badging, 'versão inesperada')
 require('android.permission.INTERNET' not in permissions, 'permissão de internet presente')
 require('android.permission.ACCESS_NETWORK_STATE' not in permissions, 'permissão de rede presente')
 with zipfile.ZipFile(apk) as z:
@@ -56,12 +56,17 @@ with zipfile.ZipFile(apk) as z:
     remap = z.read('assets/scenes/third_person.tscn.remap').decode('utf-8')
     scene = re.search(r'path="res://([^"]+)"', remap)
     require(scene is not None and 'assets/' + scene[1] in names, 'cena compilada ausente')
-    for script in ['game_3d', 'city_world', 'player_3d', 'touch_controls', 'mission_state', 'radar_3d']:
+    for script in ['game_3d', 'city_world', 'player_3d', 'touch_controls', 'mission_state', 'radar_3d', 'enemy_guard', 'citizen_npc', 'dialogue_book']:
         require('assets/scripts/' + script + '.gdc' in names, 'módulo 3D ausente: ' + script)
     require('assets/data/story.json' in names, 'narrativa ausente')
     require('assets/assets/fonts/LICENSE-DejaVu.txt' in names, 'licença das fontes ausente')
     story = json.loads(z.read('assets/data/story.json'))
     require(len(story.get('chapters', [])) == 8, 'narrativa incompleta')
+    require('assets/data/dialogues.json' in names, 'conversas dos moradores ausentes')
+    dialogues = json.loads(z.read('assets/data/dialogues.json'))
+    characters = dialogues.get('characters', {})
+    for npc in ['lia', 'ines', 'tomas']:
+        require(len(characters.get(npc, {}).get('first', [])) >= 4, 'conversa incompleta: ' + npc)
     for abi in ['arm64-v8a', 'armeabi-v7a']:
         require('lib/' + abi + '/libgodot_android.so' in names, 'engine nativo ausente: ' + abi)
     require(not any(n.endswith(('.html', '.htm', '.js')) for n in names), 'recurso de navegador encontrado')

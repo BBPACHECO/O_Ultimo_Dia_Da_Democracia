@@ -3,6 +3,8 @@ extends Control
 
 signal interacted
 signal look_dragged(delta: Vector2)
+signal attacked
+signal camera_toggled
 
 const NAVY := Color("102a35")
 const GOLD := Color("e0b777")
@@ -21,6 +23,7 @@ var enabled: bool = true:
 
 var interact_button: Button
 var sprint_button: Button
+var attack_button: Button
 var _move_label: Label
 var _look_label: Label
 var _joystick_center := Vector2(160, 560)
@@ -28,10 +31,13 @@ var _joystick_finger: int = -1
 var _look_finger: int = -1
 var _sprint_fingers: Dictionary = {}
 var _interaction_fingers: Dictionary = {}
+var _attack_fingers: Dictionary = {}
 var _mouse_joystick: bool = false
 var _mouse_sprint: bool = false
 var _mouse_interaction: bool = false
+var _mouse_attack: bool = false
 var _interaction_available: bool = false
+var _attack_available: bool = true
 
 
 func _ready() -> void:
@@ -41,6 +47,9 @@ func _ready() -> void:
 	interact_button.pressed.connect(_emit_interaction)
 	interact_button.disabled = true
 	sprint_button = _make_button("CORRER", "SprintButton")
+	attack_button = _make_button("ATACAR", "AttackButton")
+	attack_button.pressed.connect(_emit_attack)
+	attack_button.disabled = not _attack_available
 	_move_label = _make_label("MOVER")
 	_look_label = _make_label("DESLIZE À DIREITA PARA OLHAR")
 	resized.connect(_layout_controls)
@@ -112,6 +121,8 @@ func _layout_controls() -> void:
 	interact_button.size = Vector2(218, 78)
 	sprint_button.position = Vector2(size.x - inset.z - 188, size.y - inset.w - 106)
 	sprint_button.size = Vector2(164, 70)
+	attack_button.position = Vector2(size.x - inset.z - 216, size.y - inset.w - 306)
+	attack_button.size = Vector2(192, 78)
 	_move_label.position = _joystick_center + Vector2(-85, 102)
 	_move_label.size = Vector2(170, 22)
 	_look_label.position = Vector2(size.x * 0.39, size.y - inset.w - 34)
@@ -140,6 +151,12 @@ func set_interaction_label(text: String, available: bool) -> void:
 		interact_button.disabled = not available
 
 
+func set_attack_available(value: bool) -> void:
+	_attack_available = value
+	if attack_button != null:
+		attack_button.disabled = not value
+
+
 func reset_controls() -> void:
 	move_vector = Vector2.ZERO
 	sprint_pressed = false
@@ -147,9 +164,11 @@ func reset_controls() -> void:
 	_look_finger = -1
 	_sprint_fingers.clear()
 	_interaction_fingers.clear()
+	_attack_fingers.clear()
 	_mouse_joystick = false
 	_mouse_sprint = false
 	_mouse_interaction = false
+	_mouse_attack = false
 	_refresh_buttons()
 	queue_redraw()
 
@@ -181,7 +200,7 @@ func _input(event: InputEvent) -> void:
 		elif local.index == _look_finger:
 			look_dragged.emit(local.relative)
 			handled = true
-		elif _sprint_fingers.has(local.index) or _interaction_fingers.has(local.index):
+		elif _sprint_fingers.has(local.index) or _interaction_fingers.has(local.index) or _attack_fingers.has(local.index):
 			handled = true
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		var local := make_input_local(event) as InputEventMouseButton
@@ -195,6 +214,14 @@ func _input(event: InputEvent) -> void:
 
 
 func _touch_pressed(index: int, at: Vector2) -> bool:
+	# A duplicate press cannot reassign an existing finger or trigger two attacks.
+	if index == _joystick_finger or index == _look_finger or _sprint_fingers.has(index) or _interaction_fingers.has(index) or _attack_fingers.has(index):
+		return true
+	if attack_button.get_rect().has_point(at):
+		_attack_fingers[index] = true
+		_refresh_buttons()
+		_emit_attack()
+		return true
 	if interact_button.get_rect().has_point(at):
 		_interaction_fingers[index] = true
 		_refresh_buttons()
@@ -231,12 +258,20 @@ func _touch_released(index: int) -> bool:
 	if _interaction_fingers.has(index):
 		_interaction_fingers.erase(index)
 		handled = true
+	if _attack_fingers.has(index):
+		_attack_fingers.erase(index)
+		handled = true
 	_refresh_buttons()
 	queue_redraw()
 	return handled
 
 
 func _mouse_pressed(at: Vector2) -> bool:
+	if attack_button.get_rect().has_point(at):
+		_mouse_attack = true
+		_refresh_buttons()
+		_emit_attack()
+		return true
 	if interact_button.get_rect().has_point(at):
 		_mouse_interaction = true
 		_refresh_buttons()
@@ -255,10 +290,11 @@ func _mouse_pressed(at: Vector2) -> bool:
 
 
 func _mouse_released() -> bool:
-	var handled := _mouse_joystick or _mouse_sprint or _mouse_interaction
+	var handled := _mouse_joystick or _mouse_sprint or _mouse_interaction or _mouse_attack
 	_mouse_joystick = false
 	_mouse_sprint = false
 	_mouse_interaction = false
+	_mouse_attack = false
 	if _joystick_finger < 0:
 		move_vector = Vector2.ZERO
 	sprint_pressed = not _sprint_fingers.is_empty()
@@ -278,8 +314,15 @@ func _emit_interaction() -> void:
 		interacted.emit()
 
 
+func _emit_attack() -> void:
+	if enabled and _attack_available:
+		attacked.emit()
+
+
 func _refresh_buttons() -> void:
 	if interact_button != null:
 		interact_button.modulate = GOLD if not _interaction_fingers.is_empty() or _mouse_interaction else Color.WHITE
 	if sprint_button != null:
 		sprint_button.modulate = GOLD if sprint_pressed else Color.WHITE
+	if attack_button != null:
+		attack_button.modulate = GOLD if not _attack_fingers.is_empty() or _mouse_attack else Color.WHITE

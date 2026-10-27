@@ -1,7 +1,9 @@
 extends RefCounted
 ## Regras da missão e progresso offline. A interface e o mundo não vivem aqui.
 const DURATION: float = 300.0
-const SAVE_VERSION: int = 1
+const SAVE_VERSION: int = 2
+const ENEMY_IDS: Array[String] = ["g1", "g2", "g3"]
+const NPC_IDS: Array[String] = ["lia", "ines", "tomas"]
 var save_path: String = "user://mission_3d_v2.json"
 var evidence_ids: Array[String] = ["arquivo", "praca", "redacao"]
 var collected: Array[String] = []
@@ -10,6 +12,9 @@ var alert: float = 0.0
 var outcome: String = ""
 var position: Vector3 = Vector3(0, 0.1, 16)
 var last_save_ok: bool = true
+var health: float = 100.0
+var defeated_ids: Array[String] = []
+var talked_ids: Array[String] = []
 
 
 func start_new() -> void:
@@ -19,6 +24,18 @@ func start_new() -> void:
 	outcome = ""
 	position = Vector3(0, 0.1, 16)
 	last_save_ok = true
+	health = 100.0
+	defeated_ids.clear()
+	talked_ids.clear()
+
+
+func take_damage(amount: float) -> bool:
+	if not outcome.is_empty() or not is_finite(amount) or amount <= 0.0 or health <= 0.0:
+		return false
+	health = maxf(0.0, health - amount)
+	if health <= 0.0:
+		outcome = "injured"
+	return true
 
 
 func remaining() -> float:
@@ -58,6 +75,7 @@ func save_game() -> bool:
 	file.store_string(JSON.stringify({
 		"version": SAVE_VERSION, "collected": collected, "elapsed": elapsed,
 		"alert": alert, "outcome": outcome,
+		"health": health, "defeated_ids": defeated_ids, "talked_ids": talked_ids,
 		"position": [position.x, position.y, position.z],
 	}))
 	file.flush()
@@ -79,6 +97,9 @@ func load_game() -> bool:
 	elapsed = float(data["elapsed"])
 	alert = float(data["alert"])
 	outcome = String(data["outcome"])
+	health = float(data["health"])
+	defeated_ids.assign(data["defeated_ids"])
+	talked_ids.assign(data["talked_ids"])
 	var p: Array = data["position"]
 	position = Vector3(float(p[0]), float(p[1]), float(p[2]))
 	last_save_ok = true
@@ -93,7 +114,18 @@ func _read_save() -> Dictionary:
 	if parser.parse(file.get_as_text()) != OK or not parser.data is Dictionary:
 		return {}
 	var data: Dictionary = parser.data
-	if data.get("version") != SAVE_VERSION or not data.get("collected") is Array:
+	var version: Variant = data.get("version")
+	if not _number(version) or float(version) != floorf(float(version)):
+		return {}
+	if (int(version) != 1 and int(version) != SAVE_VERSION) or not data.get("collected") is Array:
+		return {}
+	if data["version"] == 1:
+		data["health"] = 100.0
+		data["defeated_ids"] = []
+		data["talked_ids"] = []
+	if not _number(data.get("health")) or float(data["health"]) < 0.0 or float(data["health"]) > 100.0:
+		return {}
+	if not _valid_ids(data.get("defeated_ids"), ENEMY_IDS) or not _valid_ids(data.get("talked_ids"), NPC_IDS):
 		return {}
 	var ids: Array = data["collected"]
 	var seen: Array = []
@@ -108,13 +140,17 @@ func _read_save() -> Dictionary:
 		return {}
 	if float(data["alert"]) < 0.0 or float(data["alert"]) > 100.0:
 		return {}
-	if data.get("outcome") not in ["", "transmitted", "detected", "timed_out"]:
+	if data.get("outcome") not in ["", "transmitted", "detected", "timed_out", "injured"]:
 		return {}
 	if data["outcome"] == "transmitted" and ids.size() != evidence_ids.size():
 		return {}
 	if data["outcome"] == "detected" and float(data["alert"]) < 100.0:
 		return {}
 	if data["outcome"] == "timed_out" and float(data["elapsed"]) < DURATION:
+		return {}
+	if data["outcome"] == "injured" and float(data["health"]) > 0.0:
+		return {}
+	if data["outcome"] != "injured" and float(data["health"]) <= 0.0:
 		return {}
 	if data["outcome"] == "" and (float(data["elapsed"]) >= DURATION or float(data["alert"]) >= 100.0):
 		return {}
@@ -131,3 +167,14 @@ func _read_save() -> Dictionary:
 
 func _number(value: Variant) -> bool:
 	return (value is float or value is int) and is_finite(float(value))
+
+
+func _valid_ids(value: Variant, allowed: Array[String]) -> bool:
+	if not value is Array:
+		return false
+	var seen: Array = []
+	for id: Variant in value:
+		if not id is String or id not in allowed or id in seen:
+			return false
+		seen.append(id)
+	return true

@@ -27,6 +27,22 @@ func _run() -> void:
 	await capture("01-inicio-3d.png")
 	game.start_mission()
 	await capture("02-terceira-pessoa.png")
+	var lia: Node3D = game.citizens[0]
+	game.player.reset_player(lia.global_position + Vector3(0, 0.1, 1.8))
+	game.begin_dialogue(lia)
+	await capture("03-dialogo-lia.png")
+	while game.phase == "dialogue":
+		game.advance_dialogue()
+	for guard: Node3D in game.enemies:
+		guard.set_active(false)
+	var opponent: Node3D = game.enemies[0]
+	opponent.set_active(true)
+	game.player.reset_player(opponent.global_position + Vector3(0, 0.1, -1.5))
+	game.player.visual.rotation.y = PI
+	game.attack()
+	await capture("04-combate.png")
+	opponent.set_active(false)
+	game.player.reset_player(Vector3(0, 0.1, 10))
 	game.player.add_camera_look(Vector2(100, -25))
 	game.controls.move_vector = Vector2(0, -1)
 	for frame in range(30):

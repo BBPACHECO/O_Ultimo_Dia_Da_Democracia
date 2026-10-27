@@ -8,7 +8,18 @@ var evidence_points: Array = [
 	{"id": "gravacao", "title": "ESTAÇÃO DE RÁDIO", "position": Vector3(13.0, 0.0, -8.0), "description": "A gravação de uma testemunha confirma a operação desta noite."},
 	{"id": "lista", "title": "A ÚLTIMA REDAÇÃO", "position": Vector3(-9.0, 0.0, -18.0), "description": "Uma lista de ordens e horários completa o dossiê."},
 ]
+var npc_spots: Array[Dictionary] = [
+	{"id": "lia", "name": "Lia", "position": Vector3(4, 0, 14)},
+	{"id": "ines", "name": "Inês", "position": Vector3(-12, 0, 4)},
+	{"id": "tomas", "name": "Tomás", "position": Vector3(10, 0, -7)},
+]
+var guard_routes: Array[Dictionary] = [
+	{"id": "g1", "points": [Vector3(2, 0, 9), Vector3(4, 0, 4), Vector3(-2, 0, 3)]},
+	{"id": "g2", "points": [Vector3(11, 0, -5), Vector3(12, 0, -10), Vector3(9, 0, -13)]},
+	{"id": "g3", "points": [Vector3(-8, 0, -14), Vector3(-6, 0, -19), Vector3(-10, 0, -22)]},
+]
 var patrols: Array[Node3D] = []
+var building_meshes: Array[MeshInstance3D] = []
 var _built: bool = false
 var _clock: float = 0.0
 var _beacons: Dictionary = {}
@@ -18,6 +29,7 @@ var _tower_lamp: MeshInstance3D
 var _tower_active: bool = false
 var _materials: Dictionary = {}
 var _window_transforms: Array[Transform3D] = []
+var _frame_transforms: Array[Transform3D] = []
 var _patrol_origins: Array[Vector3] = []
 
 
@@ -93,11 +105,11 @@ func build_world() -> void:
 		return
 	_built = true
 	_lighting()
-	var ground := _material("ground", Color("354b54"))
-	var road := _material("road", Color("21313d"))
-	var sidewalk := _material("sidewalk", Color("67777b"))
-	var curb := _material("curb", Color("91a0a1"))
-	var paint := _material("paint", Color("b2b7aa"))
+	var ground := _material("ground", Color("687154"))
+	var road := _material("road", Color("555c55"))
+	var sidewalk := _material("sidewalk", Color("9c9b88"))
+	var curb := _material("curb", Color("b0ad96"))
+	var paint := _material("paint", Color("dbd4b5"))
 	_box(self, Vector3(0, -0.3, 0), Vector3(80, 0.6, 80), ground, true)
 	_box(self, Vector3(0, 0.014, -3), Vector3(9, 0.028, 65), road)
 	_box(self, Vector3(0, 0.02, 2), Vector3(64, 0.035, 7), road)
@@ -111,19 +123,19 @@ func build_world() -> void:
 		_box(self, Vector3(float(x), 0.048, 10.0), Vector3(0.5, 0.02, 2.6), paint)
 		_box(self, Vector3(float(x), 0.048, -15.5), Vector3(0.5, 0.02, 2.0), paint)
 	# Os grandes quarteirões ficam fora dos corredores de navegação e dos objetivos.
-	_building(Vector3(-21, 0, 1), Vector3(10, 10, 11), Color("53646b"), "ARQUIVO MUNICIPAL", true)
-	_building(Vector3(22, 0, -9), Vector3(11, 12, 13), Color("47616b"), "RÁDIO AURORA · 104.3", false)
-	_building(Vector3(-18, 0, -20), Vector3(10, 8, 10), Color("5d6066"), "JORNAL FAROL", true)
-	_building(Vector3(-23, 0, 20), Vector3(12, 14, 12), Color("374c5a"), "", true)
-	_building(Vector3(23, 0, 20), Vector3(14, 17, 12), Color("4e606b"), "", false)
-	_building(Vector3(24, 0, -26), Vector3(13, 15, 12), Color("465566"), "", false)
-	_building(Vector3(-29, 0, -28), Vector3(10, 19, 11), Color("3a5062"), "", true)
-	_building(Vector3(27, 0, 5), Vector3(10, 8, 8), Color("6b6d6c"), "", false)
+	_building(Vector3(-21, 0, 1), Vector3(10, 7.3, 11), Color("899080"), "ARQUIVO MUNICIPAL", true)
+	_building(Vector3(22, 0, -9), Vector3(11, 8.5, 13), Color("788879"), "RÁDIO AURORA · 104.3", false)
+	_building(Vector3(-18, 0, -20), Vector3(10, 6.5, 10), Color("a49177"), "JORNAL FAROL", true)
+	_building(Vector3(-23, 0, 20), Vector3(12, 8.5, 12), Color("74806d"), "", true)
+	_building(Vector3(23, 0, 20), Vector3(14, 10, 12), Color("918876"), "", false)
+	_building(Vector3(24, 0, -26), Vector3(13, 10.5, 12), Color("798274"), "", false)
+	_building(Vector3(-29, 0, -28), Vector3(10, 15, 11), Color("6d786b"), "", true)
+	_building(Vector3(27, 0, 5), Vector3(10, 6.5, 8), Color("96917f"), "", false)
 	# Skyline distante: visível, mas fora da área física de jogo.
 	for index in range(11):
 		var x := -42.0 + float(index) * 8.0
 		var height := 11.0 + float((index * 7) % 13)
-		_box(self, Vector3(x, height / 2.0, -43), Vector3(6, height, 7), _material("skyline", Color("283d50")))
+		_box(self, Vector3(x, height / 2.0, -43), Vector3(6, height, 7), _material("skyline", Color("566454")))
 	_window_batch()
 	_tower()
 	for z in [15.0, 5.0, -6.0, -18.0, -28.0]:
@@ -136,6 +148,9 @@ func build_world() -> void:
 	_bench(Vector3(-4.5, 0, -22), PI / 2.0)
 	_barricade(Vector3(14, 0, 12), -0.2)
 	_barricade(Vector3(-14, 0, -10), 0.15)
+	_street_details()
+	_gardens()
+	_public_props()
 	_label(self, Vector3(0, 4.5, 18), "PRAÇA DA AURORA", 42)
 	for data: Dictionary in evidence_points:
 		_evidence(data)
@@ -153,28 +168,28 @@ func _lighting() -> void:
 	var environment := Environment.new()
 	var sky := Sky.new()
 	var sky_material := ProceduralSkyMaterial.new()
-	sky_material.sky_top_color = Color("09192e")
-	sky_material.sky_horizon_color = Color("2c435b")
-	sky_material.ground_bottom_color = Color("243d4e")
-	sky_material.ground_horizon_color = Color("2c435b")
+	sky_material.sky_top_color = Color("384b54")
+	sky_material.sky_horizon_color = Color("879582")
+	sky_material.ground_bottom_color = Color("4a5545")
+	sky_material.ground_horizon_color = Color("879582")
 	sky_material.sun_angle_max = 1.5
 	sky.sky_material = sky_material
 	environment.background_mode = Environment.BG_SKY
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color("88a4bc")
-	environment.ambient_light_energy = 0.45
+	environment.ambient_light_color = Color("bdc3aa")
+	environment.ambient_light_energy = 0.48
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.fog_enabled = true
-	environment.fog_light_color = Color("344e68")
+	environment.fog_light_color = Color("77846f")
 	environment.fog_light_energy = 0.4
-	environment.fog_density = 0.006
+	environment.fog_density = 0.004
 	environment_node.environment = environment
 	add_child(environment_node)
 	var moon := DirectionalLight3D.new()
 	moon.name = "LuzDaCidade"
 	moon.rotation_degrees = Vector3(-48, -30, 0)
-	moon.light_color = Color("d4e2e7")
+	moon.light_color = Color("f3d8af")
 	moon.light_energy = 0.55
 	moon.shadow_enabled = true
 	moon.directional_shadow_max_distance = 45.0
@@ -184,24 +199,48 @@ func _lighting() -> void:
 
 func _building(at: Vector3, dimensions: Vector3, color: Color, sign: String, faces_east: bool) -> void:
 	var mat_key := "building_%s" % color.to_html()
-	_box(self, at + Vector3(0, dimensions.y / 2.0, 0), dimensions, _material(mat_key, color), true)
-	_box(self, at + Vector3(0, dimensions.y + 0.2, 0), Vector3(dimensions.x + 0.4, 0.4, dimensions.z + 0.4), _material("roof", Color("273c4a")))
+	building_meshes.append(_box(self, at + Vector3(0, dimensions.y / 2.0, 0), dimensions, _material(mat_key, color), true))
+	building_meshes.append(_box(self, at + Vector3(0, dimensions.y + 0.15, 0), Vector3(dimensions.x + 0.45, 0.3, dimensions.z + 0.45), _material("roof", Color("535a49"))))
+	# Frisos e base de alvenaria dão escala humana às fachadas.
+	_box(self, at + Vector3(0, 0.32, 0), Vector3(dimensions.x + 0.12, 0.64, dimensions.z + 0.12), _material("foundation", Color("6f7565")))
+	_box(self, at + Vector3(0, 3.0, 0), Vector3(dimensions.x + 0.15, 0.12, dimensions.z + 0.15), _material("trim", Color("b1ad92")))
+	for corner_x in [-1.0, 1.0]:
+		for corner_z in [-1.0, 1.0]:
+			_box(self, at + Vector3(corner_x * dimensions.x * 0.5, dimensions.y * 0.5, corner_z * dimensions.z * 0.5), Vector3(0.16, dimensions.y, 0.16), _material("trim", Color("b1ad92")))
+	# Caixa d'água e dutos, em vez de uma laje totalmente vazia.
+	_box(self, at + Vector3(-dimensions.x * 0.22, dimensions.y + 0.65, 0), Vector3(1.5, 1, 1.5), _material("roof_utility", Color("7b8070")))
+	_cylinder(self, at + Vector3(dimensions.x * 0.22, dimensions.y + 0.65, -dimensions.z * 0.24), 0.28, 1.0, _material("pipe", Color("606956")))
 	var facade_x := at.x + (dimensions.x / 2.0 + 0.05) * (1 if faces_east else -1)
+	var facade_normal := Vector3.RIGHT if faces_east else Vector3.LEFT
 	for floor_index in range(1, int(dimensions.y / 2.5)):
 		for column in range(4):
 			if (floor_index + column) % 5 == 0:
 				continue
 			var z := at.z - dimensions.z * 0.35 + float(column) * dimensions.z * 0.23
-			_window_transforms.append(Transform3D(Basis.IDENTITY.scaled(Vector3(0.06, 1.1, 1.1)), Vector3(facade_x, float(floor_index) * 2.5, z)))
+			_add_window(Vector3(facade_x, float(floor_index) * 2.5, z), Vector3(0.06, 1.1, 1.1), facade_normal)
 	# Mais janelas na face que aponta para a praça e a câmera inicial.
 	for floor_index in range(1, int(dimensions.y / 2.5)):
 		for column in range(3):
 			var x := at.x - dimensions.x * 0.28 + float(column) * dimensions.x * 0.28
-			_window_transforms.append(Transform3D(Basis.IDENTITY.scaled(Vector3(1.0, 1.1, 0.06)), Vector3(x, float(floor_index) * 2.5, at.z + dimensions.z / 2.0 + 0.05)))
+			_add_window(Vector3(x, float(floor_index) * 2.5, at.z + dimensions.z / 2.0 + 0.05), Vector3(1.0, 1.1, 0.06), Vector3.BACK)
 	if not sign.is_empty():
 		var sign_at := Vector3(facade_x + (0.1 if faces_east else -0.1), 3.0, at.z)
 		_label(self, sign_at, sign, 27)
-		_box(self, Vector3(facade_x, 1.2, at.z), Vector3(0.12, 2.4, 1.5), _material("door", Color("243340")))
+		_box(self, Vector3(facade_x, 1.2, at.z), Vector3(0.12, 2.4, 1.5), _material("door", Color("394c42")))
+		_box(self, Vector3(facade_x, 1.8, at.z), Vector3(0.15, 0.8, 1.1), _material("door_glass", Color("849188")))
+		var awning := _box(self, Vector3(facade_x, 2.8, at.z) + facade_normal * 0.65, Vector3(1.5, 0.13, 2.4), _material("awning", Color("566d57")))
+		awning.rotation.z = -0.12 if faces_east else 0.12
+		for z_offset in [-1.12, 1.12]:
+			_box(self, Vector3(facade_x, 2.65, at.z + z_offset) + facade_normal * 0.65, Vector3(1.5, 0.24, 0.08), _material("awning_trim", Color("d1c49b")))
+		# Avisos nos prédios fazem parte da cidade ficcional, não de uma textura remota.
+		_box(self, Vector3(facade_x, 1.55, at.z + 2.0) + facade_normal * 0.04, Vector3(0.035, 0.8, 0.58), _material("poster", Color("e0d7b1")))
+		_box(self, Vector3(facade_x, 1.55, at.z + 2.0) + facade_normal * 0.065, Vector3(0.04, 0.07, 0.4), _material("poster_ink", Color("7a6755")))
+
+
+func _add_window(at: Vector3, dimensions: Vector3, facing: Vector3) -> void:
+	_window_transforms.append(Transform3D(Basis.IDENTITY.scaled(dimensions), at + facing * 0.025))
+	var frame_size := dimensions + Vector3(0.24 if dimensions.x > 0.1 else 0.0, 0.24, 0.24 if dimensions.z > 0.1 else 0.0)
+	_frame_transforms.append(Transform3D(Basis.IDENTITY.scaled(frame_size), at - facing * 0.015))
 
 
 func _window_batch() -> void:
@@ -215,9 +254,10 @@ func _window_batch() -> void:
 		multimesh.set_instance_transform(index, _window_transforms[index])
 	var windows := MultiMeshInstance3D.new()
 	windows.multimesh = multimesh
-	windows.material_override = _material("window", Color("f0c78d"), 0.75)
+	windows.material_override = _material("window", Color("9da78b"), 0.08)
 	windows.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(windows)
+	_batch_boxes("WindowFrames", _frame_transforms, _material("window_frames", Color("535e4d")))
 
 
 func _tower() -> void:
@@ -272,9 +312,203 @@ func _lamp(at: Vector3) -> void:
 
 
 func _tree(at: Vector3) -> void:
-	_cylinder(self, at + Vector3(0, 1.1, 0), 0.16, 2.2, _material("tree_trunk", Color("70574a")))
-	_cylinder(self, at + Vector3(0, 3.0, 0), 1.4, 3.0, _material("tree_crown", Color("416a65")), 0.1)
-	_box(self, at + Vector3(0, 0.12, 0), Vector3(2, 0.24, 2), _material("planter", Color("526267")), true)
+	_cylinder(self, at + Vector3(0, 1.1, 0), 0.16, 2.2, _material("tree_trunk", Color("79674e")))
+	var crown_mesh := SphereMesh.new()
+	crown_mesh.radius = 1.25
+	crown_mesh.height = 2.1
+	crown_mesh.radial_segments = 7
+	crown_mesh.rings = 3
+	for offset in [Vector3(-0.65, 2.7, 0.05), Vector3(0.6, 2.85, 0.1), Vector3(0, 3.55, -0.1)]:
+		var crown := MeshInstance3D.new()
+		crown.mesh = crown_mesh
+		crown.position = at + offset
+		crown.material_override = _material("tree_crown", Color("657c49"))
+		add_child(crown)
+	_box(self, at + Vector3(0, 0.12, 0), Vector3(2, 0.24, 2), _material("planter", Color("92907a")), true)
+
+
+func _batch_boxes(node_name: String, transforms: Array[Transform3D], material: Material) -> void:
+	if transforms.is_empty():
+		return
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3.ONE
+	var batch := MultiMesh.new()
+	batch.transform_format = MultiMesh.TRANSFORM_3D
+	batch.mesh = mesh
+	batch.instance_count = transforms.size()
+	for index in range(transforms.size()):
+		batch.set_instance_transform(index, transforms[index])
+	var instance := MultiMeshInstance3D.new()
+	instance.name = node_name
+	instance.multimesh = batch
+	instance.material_override = material
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(instance)
+
+
+func _street_details() -> void:
+	var paving: Array[Transform3D] = []
+	for side in [-1.0, 1.0]:
+		for z in range(-34, 31, 2):
+			paving.append(Transform3D(Basis.IDENTITY.scaled(Vector3(4.2, 0.008, 0.025)), Vector3(side * 6.8, 0.086, float(z))))
+		for x_offset in [-1.05, 1.05]:
+			paving.append(Transform3D(Basis.IDENTITY.scaled(Vector3(0.025, 0.008, 66)), Vector3(side * 6.8 + x_offset, 0.086, -3)))
+	_batch_boxes("PavementJoints", paving, _material("paving_joints", Color("7a806d")))
+	var patches: Array[Transform3D] = []
+	var random := RandomNumberGenerator.new()
+	random.seed = 4816
+	for index in range(36):
+		var at := Vector3(random.randf_range(-3.5, 3.5), 0.037, random.randf_range(-30, 26))
+		var dimensions := Vector3(random.randf_range(0.2, 0.6), 0.004, random.randf_range(0.4, 1.4))
+		patches.append(Transform3D(Basis(Vector3.UP, random.randf_range(-0.15, 0.15)).scaled(dimensions), at))
+	_batch_boxes("AsphaltPatches", patches, _material("asphalt_patch", Color("4b534b")))
+	var papers: Array[Transform3D] = []
+	for at in [Vector3(-8.8, 0.092, 2.5), Vector3(7.0, 0.092, 11.5), Vector3(-7.3, 0.092, -12.8), Vector3(8.3, 0.092, -5.2)]:
+		papers.append(Transform3D(Basis(Vector3.UP, random.randf_range(-0.8, 0.8)).scaled(Vector3(0.23, 0.005, 0.32)), at))
+	_batch_boxes("DroppedNewspapers", papers, _material("newsprint", Color("c8c3a4")))
+
+
+func _gardens() -> void:
+	# Três lâminas cruzadas formam cada tufo. Milhares de tufos usam uma só chamada.
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for index in range(3):
+		var angle: float = float(index) * PI / 3.0
+		var side := Vector3(cos(angle) * 0.075, 0, sin(angle) * 0.075)
+		var tip := Vector3(sin(angle) * 0.055, 0.52 + float(index % 2) * 0.12, cos(angle) * 0.055)
+		var normal: Vector3 = (side * 2.0).cross(tip + side).normalized()
+		for vertex in [-side, side, tip]:
+			tool.set_normal(normal)
+			tool.add_vertex(vertex)
+	var grass_mesh: ArrayMesh = tool.commit()
+	var patches: Array[Rect2] = [
+		Rect2(-16, 16, 6, 15), Rect2(10.5, 18, 5, 13),
+		Rect2(-38, -35, 3, 70), Rect2(34, -35, 4, 70),
+		Rect2(-16, -6, 5, 4), Rect2(11.5, -22, 4, 6),
+	]
+	var count: int = 0
+	for patch: Rect2 in patches:
+		count += int(patch.get_area() * 3.0)
+		_box(self, Vector3(patch.get_center().x, 0.014, patch.get_center().y), Vector3(patch.size.x, 0.024, patch.size.y), _material("garden_soil", Color("596b45")))
+	var grass := MultiMesh.new()
+	grass.transform_format = MultiMesh.TRANSFORM_3D
+	grass.use_colors = true
+	grass.mesh = grass_mesh
+	grass.instance_count = count
+	var random := RandomNumberGenerator.new()
+	random.seed = 7084
+	var instance_index: int = 0
+	for patch: Rect2 in patches:
+		for index in range(int(patch.get_area() * 3.0)):
+			var at := Vector3(random.randf_range(patch.position.x, patch.end.x), 0.028, random.randf_range(patch.position.y, patch.end.y))
+			var scale_factor: float = random.randf_range(0.65, 1.3)
+			grass.set_instance_transform(instance_index, Transform3D(Basis(Vector3.UP, random.randf_range(0, TAU)).scaled(Vector3.ONE * scale_factor), at))
+			grass.set_instance_color(instance_index, Color("879153").lerp(Color("49633d"), random.randf()))
+			instance_index += 1
+	var grass_material := StandardMaterial3D.new()
+	grass_material.albedo_color = Color.WHITE
+	grass_material.vertex_color_use_as_albedo = true
+	grass_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	grass_material.roughness = 1.0
+	var grass_node := MultiMeshInstance3D.new()
+	grass_node.name = "GrassPatches"
+	grass_node.multimesh = grass
+	grass_node.material_override = grass_material
+	grass_node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(grass_node)
+	# Cercas mantêm os canteiros visíveis sem fechar os acessos à praça.
+	var fence_parts: Array[Transform3D] = []
+	for x in [-16.7, 15.8]:
+		for z in range(19, 32, 2):
+			fence_parts.append(Transform3D(Basis.IDENTITY.scaled(Vector3(0.09, 1.15, 0.09)), Vector3(x, 0.58, float(z))))
+		for y in [0.28, 0.91]:
+			fence_parts.append(Transform3D(Basis.IDENTITY.scaled(Vector3(0.055, 0.055, 12)), Vector3(x, y, 25)))
+		for z in range(20, 31, 2):
+			for angle in [-0.38, 0.38]:
+				fence_parts.append(Transform3D(Basis(Vector3.RIGHT, angle).scaled(Vector3(0.022, 0.022, 2.1)), Vector3(x, 0.60, float(z))))
+		var fence_body := StaticBody3D.new()
+		fence_body.position = Vector3(x, 0.55, 25)
+		var fence_shape := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		box.size = Vector3(0.1, 1.1, 12)
+		fence_shape.shape = box
+		fence_body.add_child(fence_shape)
+		add_child(fence_body)
+	_batch_boxes("GardenFences", fence_parts, _material("garden_fence", Color("58634d")))
+	_tree(Vector3(-12.5, 0, 24))
+	_tree(Vector3(12.6, 0, 26))
+	_shrub_batch()
+
+
+func _shrub_batch() -> void:
+	var shrub_mesh := SphereMesh.new()
+	shrub_mesh.radius = 0.62
+	shrub_mesh.height = 0.8
+	shrub_mesh.radial_segments = 7
+	shrub_mesh.rings = 3
+	var batch := MultiMesh.new()
+	batch.transform_format = MultiMesh.TRANSFORM_3D
+	batch.use_colors = true
+	batch.mesh = shrub_mesh
+	batch.instance_count = 28
+	for index in range(28):
+		var x: float = -15.2 if index < 14 else 14.4
+		var z: float = 18.0 + float(index % 14) * 0.9
+		batch.set_instance_transform(index, Transform3D(Basis.IDENTITY.scaled(Vector3(1.0, 0.8 + float(index % 3) * 0.1, 1.0)), Vector3(x, 0.42, z)))
+		batch.set_instance_color(index, Color("6a7e4b") if index % 3 == 0 else Color("526b40"))
+	var material := StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.roughness = 1.0
+	var instance := MultiMeshInstance3D.new()
+	instance.name = "ParkShrubs"
+	instance.multimesh = batch
+	instance.material_override = material
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(instance)
+
+
+func _public_props() -> void:
+	var wood := _material("crate_wood", Color("927d59"))
+	for at in [Vector3(-14, 0, 10.5), Vector3(14, 0, -18), Vector3(-25, 0, -8)]:
+		_box(self, at + Vector3(0, 0.38, 0), Vector3(0.9, 0.76, 0.9), wood, true)
+		for y in [0.12, 0.58]:
+			_box(self, at + Vector3(0, y, 0), Vector3(0.94, 0.06, 0.94), _material("crate_band", Color("5c6550")))
+	for side in [-1.0, 1.0]:
+		var at := Vector3(side * 9.4, 0, 13)
+		_cylinder(self, at + Vector3(0, 0.4, 0), 0.06, 0.8, _material("furniture_metal", Color("4b5a49")))
+		_box(self, at + Vector3(0, 0.95, 0), Vector3(0.5, 0.45, 0.4), _material("mailbox", Color("647652")))
+		_box(self, at + Vector3(0, 1.0, 0.21), Vector3(0.32, 0.035, 0.025), _material("mail_slot", Color("283b31")))
+	# Bicicleta apoiada perto do jardim. Geometria simples, sem textura externa.
+	var bicycle := Node3D.new()
+	bicycle.position = Vector3(9.7, 0, 20)
+	add_child(bicycle)
+	var tyre := TorusMesh.new()
+	tyre.inner_radius = 0.29
+	tyre.outer_radius = 0.34
+	tyre.rings = 12
+	tyre.ring_segments = 6
+	for z in [-0.65, 0.65]:
+		var wheel := MeshInstance3D.new()
+		wheel.mesh = tyre
+		wheel.position = Vector3(0, 0.36, z)
+		wheel.rotation.z = PI * 0.5
+		wheel.material_override = _material("bike_tyre", Color("344135"))
+		bicycle.add_child(wheel)
+	var frame := _material("bike_frame", Color("9c6b51"))
+	_rod(bicycle, Vector3(0, 0.36, -0.65), Vector3(0, 0.85, 0.05), frame)
+	_rod(bicycle, Vector3(0, 0.85, 0.05), Vector3(0, 0.36, 0.65), frame)
+	_rod(bicycle, Vector3(0, 0.36, -0.65), Vector3(0, 0.36, 0.20), frame)
+	_rod(bicycle, Vector3(0, 0.36, 0.20), Vector3(0, 0.85, 0.05), frame)
+	_rod(bicycle, Vector3(0, 0.85, 0.05), Vector3(0, 0.82, -0.4), frame)
+	_rod(bicycle, Vector3(0, 0.82, -0.4), Vector3(0, 0.36, -0.65), frame)
+	_box(bicycle, Vector3(0, 0.97, 0.05), Vector3(0.27, 0.09, 0.30), _material("bike_seat", Color("4a4f3f")))
+	_box(bicycle, Vector3(0, 0.98, -0.45), Vector3(0.6, 0.055, 0.055), frame)
+
+
+func _rod(parent: Node3D, from: Vector3, to: Vector3, material: Material) -> void:
+	var direction: Vector3 = to - from
+	var rod := _cylinder(parent, (from + to) * 0.5, 0.025, direction.length(), material)
+	rod.basis = Basis(Quaternion(Vector3.UP, direction.normalized()))
 
 
 func _bench(at: Vector3, angle: float) -> void:

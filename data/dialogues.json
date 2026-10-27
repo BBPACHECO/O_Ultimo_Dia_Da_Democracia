@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "characters": {
+    "lia": {
+      "name": "Lia",
+      "first": [
+        {"speaker": "Lia", "text": "A redação foi fechada há dez minutos. Querem publicar o decreto à meia-noite, quando ninguém puder contestar."},
+        {"speaker": "Você", "text": "Eu vi as patrulhas. Só uma denúncia não vai bastar, vai?"},
+        {"speaker": "Lia", "text": "Precisamos de três provas: o registro no Arquivo Municipal, a gravação na rádio e a lista de ordens no Farol. Juntas, elas contam o que tentam esconder."},
+        {"speaker": "Você", "text": "E como fazemos a cidade ouvir, se derrubaram o sinal?"},
+        {"speaker": "Lia", "text": "A torre ainda transmite pelo canal de emergência. Reúna o dossiê e use o terminal. Não fique cercado: corra, proteja-se nos quarteirões e só enfrente um guarda quando precisar abrir caminho."},
+        {"speaker": "Você", "text": "Três provas, depois a torre. Eu volto com a história inteira."}
+      ],
+      "progress": [
+        {"speaker": "Lia", "text": "Você voltou com alguma coisa. Ótimo. Não publique uma parte antes de juntar o restante: vão tentar chamar tudo de boato."},
+        {"speaker": "Você", "text": "O arquivo, a rádio e o Farol. Estou fechando as pontas."},
+        {"speaker": "Lia", "text": "Então siga. Os marcadores no mapa mostram o que falta; o terminal da torre será o último passo."},
+        {"speaker": "Você", "text": "Quando o sinal voltar, a cidade terá mais do que a nossa palavra."}
+      ],
+      "repeat": [
+        {"speaker": "Você", "text": "Lia, ainda está segura aqui?"},
+        {"speaker": "Lia", "text": "Por enquanto. Você precisa do Arquivo Municipal, da rádio e da lista no Farol. Quando tiver as três provas, vá direto ao terminal da torre."},
+        {"speaker": "Você", "text": "Entendido. Vou evitar as patrulhas e continuar."}
+      ],
+      "ready": [
+        {"speaker": "Você", "text": "Está tudo aqui: os documentos, a gravação e as ordens."},
+        {"speaker": "Lia", "text": "Então não espere por uma manchete perfeita. Leve o dossiê ao terminal da torre e transmita antes da meia-noite."},
+        {"speaker": "Você", "text": "Se conseguir chegar lá, todos vão ouvir a mesma história."},
+        {"speaker": "Lia", "text": "A mesma história, com provas. É assim que aquela noite deixa de pertencer só a eles."}
+      ]
+    },
+    "ines": {
+      "name": "Inês",
+      "first": [
+        {"speaker": "Inês", "text": "Fale baixo. Eu sou a arquivista. Deixei o registro assinado no suporte, ao lado da entrada, antes que lacrassem o prédio."},
+        {"speaker": "Você", "text": "Como sei que é a versão verdadeira do decreto?"},
+        {"speaker": "Inês", "text": "Confira o protocolo, a assinatura e o horário. O fechamento da assembleia já estava decidido quando prometeram uma votação pública."},
+        {"speaker": "Você", "text": "Posso citar seu nome na transmissão?"},
+        {"speaker": "Inês", "text": "Cite o documento. Há pessoas esperando que eu volte para casa. A gravação da rádio confirma a ordem; a lista do Farol liga tudo aos responsáveis."},
+        {"speaker": "Você", "text": "Vou recolher a prova e proteger a fonte. Obrigado por não deixar isso desaparecer."}
+      ],
+      "progress": [
+        {"speaker": "Inês", "text": "Se já recolheu o registro, guarde a sequência: protocolo, horário e assinatura. É o que impede que chamem a prova de papel sem origem."},
+        {"speaker": "Você", "text": "Estou cruzando com a gravação e as ordens do Farol."},
+        {"speaker": "Inês", "text": "Faça isso. A verdade fica mais difícil de apagar quando três lugares contam a mesma coisa."},
+        {"speaker": "Você", "text": "Depois levo tudo à torre. Seu nome fica fora da transmissão."}
+      ],
+      "repeat": [
+        {"speaker": "Você", "text": "O que ainda devo conferir, Inês?"},
+        {"speaker": "Inês", "text": "O registro fica no suporte junto à entrada do arquivo. Depois, procure a gravação na rádio e a lista no Farol. Não se deixe cercar na avenida."},
+        {"speaker": "Você", "text": "Vou seguir pelos espaços entre os quarteirões."}
+      ],
+      "ready": [
+        {"speaker": "Você", "text": "As três peças batem. O decreto, a testemunha e a lista de ordens."},
+        {"speaker": "Inês", "text": "Então o arquivo cumpriu seu papel. Agora precisa sair destas ruas e chegar à cidade inteira."},
+        {"speaker": "Você", "text": "O terminal da torre é o próximo destino."},
+        {"speaker": "Inês", "text": "Vá. E lembre-se: documentos podem ser copiados; as pessoas que os preservaram precisam continuar vivas."}
+      ]
+    },
+    "tomas": {
+      "name": "Tomás",
+      "first": [
+        {"speaker": "Tomás", "text": "Se veio pelo sinal, chegou tarde para a rádio. Cortaram a linha principal. Mas consegui separar a gravação antes de entrarem."},
+        {"speaker": "Você", "text": "Lia disse que a torre ainda tem um canal de emergência."},
+        {"speaker": "Tomás", "text": "Tem. O terminal fica aos pés da torre, na ponta da avenida. Ele só libera o dossiê completo: arquivo, gravação e lista de ordens."},
+        {"speaker": "Você", "text": "E os guardas na rua? Eles seguem qualquer movimento."},
+        {"speaker": "Tomás", "text": "Mantenha uma saída aberta. Eles precisam chegar perto para acertar. Afaste-se quando prepararem o golpe; use os prédios para cortar a perseguição. Os drones também perdem seu sinal atrás das paredes."},
+        {"speaker": "Você", "text": "Vou pegar a gravação, juntar o restante e alcançar o terminal."}
+      ],
+      "progress": [
+        {"speaker": "Tomás", "text": "Você trouxe parte do dossiê. O terminal precisa das três provas; qualquer lacuna vira uma desculpa para interromper o sinal."},
+        {"speaker": "Você", "text": "Vou conferir os pontos que faltam no mapa."},
+        {"speaker": "Tomás", "text": "Quando estiver pronto, siga até a torre. Não precisa entrar no prédio: o terminal está do lado de fora."},
+        {"speaker": "Você", "text": "Entendido. A transmissão será pela rua, debaixo do relógio."}
+      ],
+      "repeat": [
+        {"speaker": "Você", "text": "Mais alguma orientação para chegar ao terminal?"},
+        {"speaker": "Tomás", "text": "Use a avenida como referência, mas saia dela se vierem atrás de você. O terminal fica na base da torre. Reúna as três provas antes de transmitir."},
+        {"speaker": "Você", "text": "Vou manter distância e uma rota de fuga."}
+      ],
+      "ready": [
+        {"speaker": "Você", "text": "O dossiê está completo. Só falta colocá-lo no ar."},
+        {"speaker": "Tomás", "text": "A torre está pronta para receber. Aproxime-se do terminal e acione a transmissão. Se conseguir, cada rádio ainda ligado vai repetir suas provas."},
+        {"speaker": "Você", "text": "E se cortarem o canal de novo?"},
+        {"speaker": "Tomás", "text": "Primeiro precisamos fazer a cidade ouvir. Depois disso, o silêncio já não vai parecer tão natural."}
+      ]
+    }
+  }
+}

@@ -5,6 +5,9 @@ const Player = preload("res://scripts/player_3d.gd")
 const Touch = preload("res://scripts/touch_controls.gd")
 const Mission = preload("res://scripts/mission_state.gd")
 const Radar = preload("res://scripts/radar_3d.gd")
+const Guard = preload("res://scripts/enemy_guard.gd")
+const Citizen = preload("res://scripts/citizen_npc.gd")
+const Dialogues = preload("res://scripts/dialogue_book.gd")
 const SERIF = preload("res://assets/fonts/DejaVuSerif-Bold.ttf")
 const INK: Color = Color("f1ead8")
 const GOLD: Color = Color("e7b974")
@@ -31,6 +34,19 @@ var exit_dialog: ConfirmationDialog
 var _toast_time: float = 0.0
 var _autosave: float = 0.0
 var _nearby: Dictionary = {}
+var enemies: Array = []
+var citizens: Array = []
+var actors: Node3D
+var health_label: Label
+var dialogue_panel: PanelContainer
+var dialogue_speaker: Label
+var dialogue_text: Label
+var dialogue_next: Button
+var dialogue_lines: Array = []
+var dialogue_index: int = 0
+var _dialogue_npc: Node3D
+var _dialogue_book = Dialogues.new()
+var _attack_cooldown: float = 0.0
 
 
 func _ready() -> void:
@@ -40,15 +56,22 @@ func _ready() -> void:
 	player.name = "Player"
 	add_child(player)
 	player.reset_player(world.spawn_point)
+	_spawn_actors()
 	_build_interface()
 	_apply_safe_area()
 	get_viewport().size_changed.connect(_apply_safe_area)
 	if mission.load_game() and mission.outcome.is_empty():
 		continue_button.visible = true
+	_restore_actor_progress()
 	show_home()
 
 
 func _reset_world() -> void:
+	if is_instance_valid(actors):
+		remove_child(actors)
+		actors.free()
+	enemies.clear()
+	citizens.clear()
 	if is_instance_valid(world):
 		remove_child(world)
 		world.free()
@@ -60,6 +83,43 @@ func _reset_world() -> void:
 		mission.evidence_ids.append(String(point["id"]))
 	if is_instance_valid(radar):
 		radar.world = world
+	if is_instance_valid(player):
+		_spawn_actors()
+
+
+func _spawn_actors() -> void:
+	actors = Node3D.new()
+	actors.name = "PeopleOfAurora"
+	add_child(actors)
+	for route: Dictionary in world.guard_routes:
+		var guard = Guard.new()
+		guard.guard_id = String(route["id"])
+		guard.target = player
+		guard.patrol_route.assign(route["points"])
+		guard.position = guard.patrol_route[0] + Vector3.UP * 0.1
+		guard.struck_player.connect(_on_player_struck.bind(guard))
+		guard.defeated.connect(_on_guard_defeated)
+		actors.add_child(guard)
+		enemies.append(guard)
+	for spot: Dictionary in world.npc_spots:
+		var citizen = Citizen.new()
+		citizen.npc_id = String(spot["id"])
+		citizen.display_name = String(spot["name"])
+		citizen.position = spot["position"]
+		actors.add_child(citizen)
+		citizens.append(citizen)
+	_restore_actor_progress()
+	if is_instance_valid(radar):
+		radar.enemies = enemies
+		radar.citizens = citizens
+
+
+func _restore_actor_progress() -> void:
+	for guard: Node3D in enemies:
+		if guard.guard_id in mission.defeated_ids:
+			guard.restore_defeated()
+	for citizen: Node3D in citizens:
+		citizen.mark_spoken(citizen.npc_id in mission.talked_ids)
 
 
 func _notification(what: int) -> void:
@@ -70,6 +130,8 @@ func _notification(what: int) -> void:
 			restart_dialog.hide()
 		elif exit_dialog.visible:
 			exit_dialog.hide()
+		elif phase == "dialogue":
+			close_dialogue(false)
 		elif phase == "playing":
 			pause_mission()
 		elif phase == "paused":
@@ -85,10 +147,19 @@ func _notification(what: int) -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.physical_keycode == KEY_E and phase == "playing":
-			interact()
+		if event.physical_keycode == KEY_E:
+			if phase == "dialogue":
+				advance_dialogue()
+			elif phase == "playing":
+				interact()
+		elif event.physical_keycode == KEY_SPACE and phase == "playing":
+			attack()
+		elif event.physical_keycode == KEY_F and phase == "playing":
+			player.toggle_camera_mode()
 		elif event.physical_keycode == KEY_ESCAPE:
-			if phase == "playing":
+			if phase == "dialogue":
+				close_dialogue(false)
+			elif phase == "playing":
 				pause_mission()
 			elif phase == "paused":
 				resume_mission()
@@ -104,6 +175,8 @@ func _physics_process(_delta: float) -> void:
 func _process(delta: float) -> void:
 	if phase != "playing" or not is_instance_valid(player):
 		return
+	_attack_cooldown = maxf(0.0, _attack_cooldown - delta)
+	controls.set_attack_available(_attack_cooldown <= 0.0)
 	var exposure: float = 0.0
 	for patrol: Node3D in world.patrols:
 		var offset: Vector3 = patrol.global_position - player.global_position
@@ -127,12 +200,13 @@ func _process(delta: float) -> void:
 
 func start_mission() -> void:
 	mission.start_new()
+	_attack_cooldown = 0.0
 	_reset_world()
 	player.reset_player(world.spawn_point)
 	_set_phase("playing")
 	_save_progress()
 	_update_hud()
-	_message("Explore a cidade. Os feixes dourados indicam as três provas.", 6.0)
+	_message("Converse com Lia junto à praça. Fuja dos guardas ou use ATACAR para abrir caminho.", 7.0)
 
 
 func continue_mission() -> void:
@@ -144,6 +218,7 @@ func continue_mission() -> void:
 		world.mark_collected(id)
 	world.set_tower_active(mission.collected.size() == mission.evidence_ids.size())
 	player.reset_player(mission.position)
+	_attack_cooldown = 0.0
 	_set_phase("playing")
 	_update_hud()
 	_message("Missão retomada. A cidade ainda precisa ouvir a verdade.")
@@ -152,6 +227,7 @@ func continue_mission() -> void:
 func show_home() -> void:
 	if phase in ["playing", "paused"]:
 		_save_progress()
+	dialogue_lines.clear()
 	_set_phase("home")
 	continue_button.visible = mission.has_save() and mission.outcome.is_empty()
 
@@ -177,10 +253,15 @@ func _set_phase(next: String) -> void:
 	player.set_physics_process(phase == "playing")
 	# Pause a patrulha sem desativar as colisões estáticas da cidade.
 	world.set_process(phase == "playing")
-	hud.visible = phase == "playing"
+	for guard: Node3D in enemies:
+		guard.set_active(phase == "playing")
+	for citizen: Node3D in citizens:
+		citizen.set_active(phase == "playing")
+	hud.visible = phase in ["playing", "dialogue"]
 	home_panel.visible = phase == "home"
 	pause_panel.visible = phase == "paused"
 	result_panel.visible = phase == "result"
+	dialogue_panel.visible = phase == "dialogue"
 
 
 func _save_progress() -> void:
@@ -193,6 +274,17 @@ func _save_progress() -> void:
 func interact() -> void:
 	if phase != "playing":
 		return
+	var target_npc: Node3D = _nearest_citizen()
+	if target_npc != null:
+		var npc_distance: float = _flat_distance(player.global_position, target_npc.global_position)
+		var proof_distance: float = INF
+		for point: Dictionary in world.evidence_points:
+			if point["id"] not in mission.collected:
+				proof_distance = minf(proof_distance, _flat_distance(player.global_position, point["position"]))
+		var terminal_distance: float = _flat_distance(player.global_position, world.tower_point)
+		if npc_distance < minf(proof_distance, terminal_distance) or (proof_distance > 2.8 and terminal_distance > 3.0):
+			begin_dialogue(target_npc)
+			return
 	for point: Dictionary in world.evidence_points:
 		if point["id"] in mission.collected:
 			continue
@@ -210,7 +302,123 @@ func interact() -> void:
 		else:
 			_message("Ainda faltam %d provas. Procure os feixes dourados pela cidade." % (3 - mission.collected.size()))
 	else:
-		_message("Aproxime-se de uma prova ou do terminal da torre para interagir.")
+		_message("Aproxime-se de uma pessoa, prova ou do terminal para interagir.")
+
+
+func _nearest_citizen() -> Node3D:
+	var nearest: Node3D
+	var best: float = 2.8
+	for citizen: Node3D in citizens:
+		var distance: float = _flat_distance(player.global_position, citizen.global_position)
+		if distance < best and _line_clear(player.global_position, citizen.global_position):
+			best = distance
+			nearest = citizen
+	return nearest
+
+
+func _line_clear(from: Vector3, to: Vector3) -> bool:
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(
+		from + Vector3.UP * 1.2, to + Vector3.UP * 1.2, 1)
+	# O colisor do próprio interlocutor não deve ser interpretado como uma parede.
+	var result: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
+	return result.is_empty() or Vector3(result["position"]).distance_to(to + Vector3.UP * 1.2) < 0.5
+
+
+func attack() -> void:
+	if phase != "playing" or _attack_cooldown > 0.0 or mission.health <= 0.0:
+		return
+	_attack_cooldown = 0.55
+	controls.set_attack_available(false)
+	player.play_attack()
+	var victim: Node3D
+	var best: float = 2.6
+	for guard: Node3D in enemies:
+		if guard.defeated_flag or not guard.active:
+			continue
+		var offset: Vector3 = guard.global_position - player.global_position
+		offset.y = 0.0
+		var distance: float = offset.length()
+		if distance <= best and player.facing_direction.dot(offset.normalized()) >= 0.1 and _line_clear(player.global_position, guard.global_position):
+			victim = guard
+			best = distance
+	if victim != null and victim.take_hit(25.0, player.global_position):
+		if not victim.defeated_flag:
+			_message("Você abriu espaço. Ataque novamente ou afaste-se antes da reação.", 2.0)
+
+
+func _on_player_struck(damage: float, guard: Node3D) -> void:
+	if phase != "playing" or not is_instance_valid(guard) or guard.defeated_flag or not guard.active:
+		return
+	if _flat_distance(player.global_position, guard.global_position) > 2.1 or not _line_clear(guard.global_position, player.global_position):
+		return
+	if mission.take_damage(damage):
+		player.play_hurt()
+		_update_hud()
+		_message("Você foi atingido. Afaste-se quando o guarda preparar o próximo golpe.", 3.0)
+		if not mission.outcome.is_empty():
+			_show_result()
+
+
+func _on_guard_defeated(guard: Node3D) -> void:
+	if guard.guard_id not in mission.defeated_ids:
+		mission.defeated_ids.append(guard.guard_id)
+		_save_progress()
+		_message("Guarda fora de combate. O caminho está livre.", 3.0)
+
+
+func begin_dialogue(npc: Node3D) -> void:
+	if phase != "playing" or not is_instance_valid(npc) or npc not in citizens:
+		return
+	if _flat_distance(player.global_position, npc.global_position) > 2.8 or not _line_clear(player.global_position, npc.global_position):
+		return
+	dialogue_lines = _dialogue_book.get_dialogue(npc.npc_id, {
+		"collected": mission.collected.size(), "talked": mission.talked_ids,
+		"defeated": mission.defeated_ids.size(), "health": mission.health,
+	})
+	if dialogue_lines.is_empty():
+		return
+	_save_progress()
+	_dialogue_npc = npc
+	dialogue_index = 0
+	npc.face_position(player.global_position)
+	_set_phase("dialogue")
+	_render_dialogue()
+
+
+func _render_dialogue() -> void:
+	var line: Dictionary = dialogue_lines[dialogue_index]
+	dialogue_speaker.text = String(line["speaker"])
+	dialogue_text.text = String(line["text"])
+	dialogue_next.text = "Concluir conversa" if dialogue_index == dialogue_lines.size() - 1 else "Continuar  →"
+
+
+func advance_dialogue() -> void:
+	if phase != "dialogue":
+		return
+	dialogue_index += 1
+	if dialogue_index >= dialogue_lines.size():
+		close_dialogue(true)
+	else:
+		_render_dialogue()
+
+
+func close_dialogue(completed: bool = false) -> void:
+	if phase != "dialogue":
+		return
+	if completed and is_instance_valid(_dialogue_npc) and _dialogue_npc.npc_id not in mission.talked_ids:
+		var id: String = _dialogue_npc.npc_id
+		mission.talked_ids.append(id)
+		_dialogue_npc.mark_spoken(true)
+		if id == "lia":
+			mission.health = minf(100.0, mission.health + 20.0)
+		elif id == "tomas":
+			mission.alert = 0.0
+	dialogue_lines.clear()
+	_dialogue_npc = null
+	_set_phase("playing")
+	_save_progress()
+	_update_hud()
+	_message("Conversa concluída. Continue a missão." if completed else "Conversa encerrada. Você pode voltar a falar quando quiser.", 3.0)
 
 
 func _flat_distance(a: Vector3, b: Vector3) -> float:
@@ -222,6 +430,7 @@ func _update_hud() -> void:
 	clock.text = "%02d:%02d" % [seconds / 60, seconds % 60]
 	counter.text = "PROVAS  %d / 3" % mission.collected.size()
 	alert_bar.value = mission.alert
+	health_label.text = "VIDA  %03d / 100   ·   VIGIAS  %d / 3" % [ceili(mission.health), mission.defeated_ids.size()]
 	var best: float = INF
 	_nearby = {}
 	for point: Dictionary in world.evidence_points:
@@ -241,6 +450,11 @@ func _update_hud() -> void:
 			controls.set_interaction_label("Terminal", true)
 		else:
 			controls.set_interaction_label("Recolher prova" if best <= 2.8 else "Aproxime-se", best <= 2.8)
+	var npc: Node3D = _nearest_citizen()
+	if npc != null:
+		var npc_distance: float = _flat_distance(player.global_position, npc.global_position)
+		if (npc_distance < best or best > 2.8) and (npc_distance < tower_distance or tower_distance > 3.0):
+			controls.set_interaction_label("Falar com " + npc.display_name, true)
 
 
 func _message(text: String, duration: float = 4.0) -> void:
@@ -260,6 +474,9 @@ func _show_result() -> void:
 	elif mission.outcome == "detected":
 		result_title.text = "Sinal\ninterrompido."
 		result_body.text = "As patrulhas localizaram seu sinal. Na próxima tentativa, mantenha distância dos drones e use os edifícios como cobertura."
+	elif mission.outcome == "injured":
+		result_title.text = "Você foi\ninterceptado."
+		result_body.text = "Os guardas cercaram você antes da transmissão. Evite ficar parado durante os ataques: recue quando prepararem o golpe e use ATACAR para abrir uma saída."
 	else:
 		result_title.text = "Meia-noite\nchegou."
 		result_body.text = "O prazo acabou antes da transmissão. As provas estão nos feixes dourados; recolha as três e leve-as ao terminal da torre."
@@ -412,7 +629,15 @@ func _build_interface() -> void:
 	radar.player = player
 	radar.world = world
 	radar.mission = mission
+	radar.enemies = enemies
+	radar.citizens = citizens
 	hud.add_child(radar)
+	var vitals_panel: PanelContainer = PanelContainer.new()
+	vitals_panel.position = Vector2(22, 145)
+	vitals_panel.size = Vector2(376, 120)
+	vitals_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vitals_panel.add_theme_stylebox_override("panel", _style(Color(0.04, 0.1, 0.13, 0.9)))
+	hud.add_child(vitals_panel)
 	var risk_label: Label = _label("ALERTA DAS PATRULHAS", 14, GOLD)
 	risk_label.position = Vector2(30, 158)
 	risk_label.size = Vector2(300, 24)
@@ -429,6 +654,17 @@ func _build_interface() -> void:
 	alert_bar.add_theme_stylebox_override("fill", fill)
 	alert_bar.size = Vector2(300, 6)
 	hud.add_child(alert_bar)
+	health_label = _label("VIDA  100 / 100   ·   VIGIAS  0 / 3", 17, Color("b9d8b0"))
+	health_label.name = "HealthLabel"
+	health_label.position = Vector2(30, 224)
+	health_label.size = Vector2(390, 30)
+	hud.add_child(health_label)
+	var camera_button: Button = _button("VISÃO  ◇", func() -> void: player.toggle_camera_mode())
+	camera_button.name = "CameraButton"
+	camera_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	camera_button.position = Vector2(-385, 24)
+	camera_button.size = Vector2(175, 58)
+	hud.add_child(camera_button)
 	toast = _label("", 21)
 	toast.name = "MissionMessage"
 	toast.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
@@ -441,6 +677,8 @@ func _build_interface() -> void:
 	controls = Touch.new()
 	controls.name = "TouchControls"
 	controls.interacted.connect(interact)
+	controls.attacked.connect(attack)
+	controls.camera_toggled.connect(func() -> void: player.toggle_camera_mode())
 	controls.look_dragged.connect(func(motion: Vector2) -> void:
 		if phase == "playing":
 			player.add_camera_look(motion)
@@ -451,7 +689,7 @@ func _build_interface() -> void:
 	home.add_child(_label("AURORA · 23:55", 17, GOLD))
 	home.add_child(_headline("O ÚLTIMO DIA\nDA DEMOCRACIA"))
 	home.add_child(_label("Atravesse a cidade.\nFaça a verdade chegar ao ar.", 24))
-	home.add_child(_label("Encontre três provas e leve-as à torre antes da meia-noite. Mantenha distância das patrulhas.", 20, Color("b1c4c5")))
+	home.add_child(_label("Converse com os moradores, enfrente ou evite os guardas e reúna três provas para transmitir antes da meia-noite.", 20, Color("b1c4c5")))
 	continue_button = _button("Continuar missão", continue_mission, true)
 	continue_button.name = "ContinueMissionButton"
 	continue_button.visible = false
@@ -459,7 +697,7 @@ func _build_interface() -> void:
 	var start_button: Button = _button("Iniciar missão   →", _request_start, true)
 	start_button.name = "StartMissionButton"
 	home.add_child(start_button)
-	home.add_child(_label("TOQUE  Joystick para andar · Arraste à direita para olhar\nPC  WASD · Shift para correr · E para interagir · Mouse direito para olhar", 15, Color("a7bcbd")))
+	home.add_child(_label("TOQUE  Joystick · Arraste para olhar · ATACAR · VISÃO\nPC  WASD · Shift · E conversa/ação · Espaço ataque · F câmera", 15, Color("a7bcbd")))
 	home.add_child(_label("Uma história fictícia. Jogue offline, no seu celular.", 15, GOLD))
 	pause_panel = _overlay(root_ui, "PauseScreen")
 	var pause: VBoxContainer = _column(pause_panel)
@@ -478,6 +716,34 @@ func _build_interface() -> void:
 	result.add_child(result_body)
 	result.add_child(_button("Tentar outra vez", start_mission, true))
 	result.add_child(_button("Voltar ao menu", show_home))
+	dialogue_panel = PanelContainer.new()
+	dialogue_panel.name = "DialoguePanel"
+	dialogue_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	dialogue_panel.position = Vector2(-450, -308)
+	dialogue_panel.size = Vector2(900, 280)
+	dialogue_panel.add_theme_stylebox_override("panel", _style(Color(0.04, 0.09, 0.10, 0.97), GOLD))
+	root_ui.add_child(dialogue_panel)
+	var dialogue_box: VBoxContainer = VBoxContainer.new()
+	dialogue_box.add_theme_constant_override("separation", 12)
+	dialogue_panel.add_child(dialogue_box)
+	dialogue_speaker = _label("", 22, GOLD)
+	dialogue_speaker.name = "DialogueSpeaker"
+	dialogue_box.add_child(dialogue_speaker)
+	dialogue_text = _label("", 23)
+	dialogue_text.name = "DialogueText"
+	dialogue_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dialogue_box.add_child(dialogue_text)
+	var dialogue_actions: HBoxContainer = HBoxContainer.new()
+	dialogue_actions.add_theme_constant_override("separation", 18)
+	dialogue_box.add_child(dialogue_actions)
+	var cancel_dialogue: Button = _button("Encerrar conversa", close_dialogue.bind(false))
+	cancel_dialogue.name = "EndDialogueButton"
+	cancel_dialogue.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dialogue_actions.add_child(cancel_dialogue)
+	dialogue_next = _button("Continuar  →", advance_dialogue, true)
+	dialogue_next.name = "AdvanceDialogueButton"
+	dialogue_next.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dialogue_actions.add_child(dialogue_next)
 	restart_dialog = ConfirmationDialog.new()
 	restart_dialog.title = "Recomeçar a missão?"
 	restart_dialog.dialog_text = "O progresso da missão atual será substituído."

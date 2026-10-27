@@ -2,6 +2,8 @@ extends Control
 var player: Node3D
 var world: Node3D
 var mission: RefCounted
+var enemies: Array = []
+var citizens: Array = []
 
 
 func _ready() -> void:
@@ -30,6 +32,12 @@ func _draw() -> void:
 	draw_rect(Rect2(tower - Vector2(4, 4), Vector2(8, 8)), Color("9cddc9"), false, 1.5)
 	for patrol: Node3D in world.patrols:
 		draw_circle(_map(patrol.global_position), 3.0, Color("e69578"))
+	for guard: Node3D in enemies:
+		if is_instance_valid(guard) and not guard.defeated_flag:
+			draw_circle(_map(guard.global_position), 3.5, Color("e77c6f"))
+	for citizen: Node3D in citizens:
+		if is_instance_valid(citizen):
+			draw_circle(_map(citizen.global_position), 3.0, Color("9dd6b5"))
 	var p: Vector2 = _map(player.global_position)
 	draw_circle(p, 4.0, Color("f5f3e6"))
 	var direction: Vector3 = -player.camera.global_transform.basis.z

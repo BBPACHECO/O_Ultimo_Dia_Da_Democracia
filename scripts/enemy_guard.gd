@@ -9,6 +9,7 @@ const WINDUP_TIME: float = 0.55
 const ATTACK_COOLDOWN: float = 1.3
 const DETECT_DISTANCE: float = 11.0
 const ATTACK_RANGE: float = 1.9
+const Art = preload("res://scripts/art_geometry.gd")
 const SHIRT_GREEN: Color = Color("2f8f3b")
 const SHIRT_YELLOW: Color = Color("e6c82d")
 
@@ -50,6 +51,7 @@ var _cooldown: float = 0.65
 var _walk_cycle: float = 0.0
 var _knockback: Vector3 = Vector3.ZERO
 var _avoid_side: float = 1.0
+static var _detail_sphere: SphereMesh
 
 
 func _ready() -> void:
@@ -242,29 +244,93 @@ func _flat_distance(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
 
 
-func _material(color: Color) -> StandardMaterial3D:
-	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.95
-	return material
+func _material(color: Color, kind: String = "plain") -> StandardMaterial3D:
+	return Art.surface(color, kind)
 
 
-func _box(parent: Node3D, dimensions: Vector3, at: Vector3, material: Material) -> MeshInstance3D:
+func _mesh(parent: Node3D, geometry: Mesh, at: Vector3, material: Material) -> MeshInstance3D:
 	var instance: MeshInstance3D = MeshInstance3D.new()
-	var mesh: BoxMesh = BoxMesh.new()
-	mesh.size = dimensions
-	instance.mesh = mesh
+	instance.mesh = geometry
 	instance.material_override = material
 	instance.position = at
 	parent.add_child(instance)
 	return instance
 
 
-func _limb(at: Vector3, length: float, width: float, material: Material) -> Node3D:
+func _box(parent: Node3D, dimensions: Vector3, at: Vector3, material: Material) -> MeshInstance3D:
+	return _mesh(parent, Art.rounded_box(dimensions, minf(dimensions.x, minf(dimensions.y, dimensions.z)) * 0.22), at, material)
+
+
+func _oval(parent: Node3D, dimensions: Vector3, at: Vector3, material: Material) -> MeshInstance3D:
+	# Detalhes de poucos pixels compartilham uma esfera leve; o rosto e o corpo
+	# mantêm a malha mais definida. A escala não altera as normais suaves.
+	if maxf(dimensions.x, maxf(dimensions.y, dimensions.z)) < 0.18:
+		if _detail_sphere == null:
+			_detail_sphere = SphereMesh.new()
+			_detail_sphere.radius = 0.5
+			_detail_sphere.height = 1.0
+			_detail_sphere.radial_segments = 8
+			_detail_sphere.rings = 3
+		var detail: MeshInstance3D = _mesh(parent, _detail_sphere, at, material)
+		detail.scale = dimensions
+		return detail
+	return _mesh(parent, Art.ellipsoid(dimensions), at, material)
+
+
+func _profile(parent: Node3D, rings: Array[Vector3], at: Vector3, material: Material, segments: int = 16) -> MeshInstance3D:
+	return _mesh(parent, Art.profile(rings, segments), at, material)
+
+
+func _build_leg(side: float, trousers: Material, shoes: Material, worn: Material) -> Node3D:
 	var pivot: Node3D = Node3D.new()
-	pivot.position = at
+	pivot.position = Vector3(side * 0.145, 0.80, 0)
 	visual.add_child(pivot)
-	_box(pivot, Vector3(width, length, width), Vector3(0, -length * 0.5, 0), material)
+	# Cintura, coxa, joelho e panturrilha formam uma silhueta contínua.
+	_profile(pivot, [
+		Vector3(0.058, -0.67, 0.060), Vector3(0.068, -0.59, 0.067),
+		Vector3(0.076, -0.46, 0.074), Vector3(0.073, -0.34, 0.077),
+		Vector3(0.093, -0.20, 0.090), Vector3(0.108, -0.02, 0.100),
+		Vector3(0.091, 0.045, 0.088),
+	], Vector3.ZERO, trousers, 12)
+	_oval(pivot, Vector3(0.19, 0.13, 0.32), Vector3(0, -0.69, -0.055), shoes)
+	_box(pivot, Vector3(0.19, 0.032, 0.30), Vector3(0, -0.745, -0.05), shoes)
+	if side < 0.0:
+		_box(pivot, Vector3(0.105, 0.12, 0.014), Vector3(0.015, -0.35, -0.078), worn)
+	return pivot
+
+
+func _build_arm(side: float, sleeve: Material, trim: Material, skin: Material, skin_shadow: Material) -> Node3D:
+	var pivot: Node3D = Node3D.new()
+	pivot.position = Vector3(side * 0.32, 1.36, 0)
+	visual.add_child(pivot)
+	var sleeve_mesh: MeshInstance3D = _profile(pivot, [
+		Vector3(0.085, -0.235, 0.092), Vector3(0.108, -0.12, 0.105),
+		Vector3(0.112, -0.02, 0.100), Vector3(0.084, 0.045, 0.083),
+	], Vector3.ZERO, sleeve, 12)
+	sleeve_mesh.rotation.z = side * -0.10
+	_profile(pivot, [Vector3(0.087, -0.24, 0.094), Vector3(0.098, -0.19, 0.100)], Vector3.ZERO, trim, 12)
+	_profile(pivot, [
+		Vector3(0.064, -0.43, 0.065), Vector3(0.080, -0.32, 0.075),
+		Vector3(0.084, -0.19, 0.076),
+	], Vector3.ZERO, skin, 12)
+	var forearm: Node3D = Node3D.new()
+	forearm.position.y = -0.405
+	forearm.rotation.x = 0.20
+	pivot.add_child(forearm)
+	_profile(forearm, [
+		Vector3(0.046, -0.265, 0.042), Vector3(0.063, -0.14, 0.058),
+		Vector3(0.066, -0.015, 0.064),
+	], Vector3.ZERO, skin, 12)
+	_oval(forearm, Vector3(0.127, 0.15, 0.068), Vector3(0, -0.31, -0.007), skin)
+	# Dedos compartilhados por geometria; arredondados em vez de pequenas caixas.
+	for finger in range(3):
+		var digit: MeshInstance3D = _profile(forearm, [
+			Vector3(0.009, -0.10, 0.010), Vector3(0.015, -0.075, 0.015),
+			Vector3(0.014, 0.0, 0.014),
+		], Vector3(-0.037 + finger * 0.037, -0.365, -0.017), skin_shadow, 8)
+		digit.rotation.x = 0.28
+	var thumb: MeshInstance3D = _oval(forearm, Vector3(0.037, 0.093, 0.043), Vector3(side * 0.065, -0.292, -0.014), skin)
+	thumb.rotation.z = side * 0.48
 	return pivot
 
 
@@ -272,72 +338,61 @@ func _build_visual() -> void:
 	visual = Node3D.new()
 	visual.name = "Zombie"
 	add_child(visual)
-	var green: Material = _material(SHIRT_GREEN)
-	var yellow: Material = _material(SHIRT_YELLOW)
-	var green_faded: Material = _material(Color("507c3f"))
-	var trousers: Material = _material(Color("343b39"))
-	var shoes: Material = _material(Color("252b29"))
-	var skin: Material = _material(Color("90a48a") if absi(guard_id.hash()) % 2 == 0 else Color("a1a68b"))
-	var skin_shadow: Material = _material(Color("60715e"))
-	var hair: Material = _material(Color("393c32"))
+	var green: Material = _material(SHIRT_GREEN, "cloth")
+	var yellow: Material = _material(SHIRT_YELLOW, "cloth")
+	var green_faded: Material = _material(Color("507c3f"), "cloth")
+	var trousers: Material = _material(Color("343b39"), "cloth")
+	var shoes: Material = _material(Color("252b29"), "plain")
+	var skin: Material = _material(Color("90a48a") if absi(guard_id.hash()) % 2 == 0 else Color("a1a68b"), "skin")
+	var skin_shadow: Material = _material(Color("60715e"), "skin")
+	var hair: Material = _material(Color("393c32"), "cloth")
 	var eye: Material = _material(Color("dbd29b"))
-	# As faixas envolvem a camisa: verde e amarelo continuam legíveis pelas costas.
-	var shirt: MeshInstance3D = _box(visual, Vector3(0.57, 0.64, 0.35), Vector3(0, 1.12, 0), green)
+	# Camisa com ombros, cintura e costuras; as faixas seguem o corpo dos dois lados.
+	var shirt: MeshInstance3D = _profile(visual, [
+		Vector3(0.235, 0.79, 0.143), Vector3(0.250, 0.87, 0.150),
+		Vector3(0.245, 1.02, 0.150), Vector3(0.275, 1.18, 0.165),
+		Vector3(0.310, 1.34, 0.150), Vector3(0.265, 1.43, 0.130),
+		Vector3(0.130, 1.47, 0.105),
+	], Vector3.ZERO, green, 20)
 	shirt.name = "ShirtGreen"
-	var stripe: MeshInstance3D = _box(visual, Vector3(0.585, 0.20, 0.367), Vector3(0, 1.15, 0), yellow)
+	var stripe: MeshInstance3D = _profile(visual, [
+		Vector3(0.264, 1.08, 0.164), Vector3(0.282, 1.18, 0.172),
+		Vector3(0.297, 1.25, 0.166),
+	], Vector3.ZERO, yellow, 20)
 	stripe.name = "ShirtYellowBand"
-	var shoulder: MeshInstance3D = _box(visual, Vector3(0.59, 0.075, 0.37), Vector3(0, 1.40, 0), yellow)
+	var shoulder: MeshInstance3D = _profile(visual, [
+		Vector3(0.314, 1.345, 0.155), Vector3(0.291, 1.39, 0.145),
+		Vector3(0.269, 1.43, 0.135), Vector3(0.134, 1.474, 0.110),
+	], Vector3.ZERO, yellow, 20)
 	shoulder.name = "ShirtYellowShoulder"
-	# Bainha irregular, manchas e rasgos são geométricos, sem sangue ou emblemas.
-	for index in range(4):
-		var x: float = -0.23 + float(index) * 0.15
-		var drop: float = 0.08 if (index + absi(guard_id.hash())) % 2 == 0 else 0.03
-		var hem: MeshInstance3D = _box(visual, Vector3(0.13, 0.09 + drop, 0.35), Vector3(x, 0.81 - drop * 0.35, 0), green)
-		hem.rotation.z = -0.08 if index % 2 == 0 else 0.06
-	_box(visual, Vector3(0.12, 0.11, 0.015), Vector3(-0.12, 0.96, -0.182), green_faded)
-	_box(visual, Vector3(0.15, 0.10, 0.016), Vector3(0.14, 1.30, 0.183), green_faded)
-	_box(visual, Vector3(0.08, 0.10, 0.018), Vector3(0.17, 0.91, 0.185), skin_shadow)
-	_box(visual, Vector3(0.13, 0.16, 0.14), Vector3(0, 1.49, 0), skin)
+	_profile(visual, [Vector3(0.091, 1.45, 0.088), Vector3(0.084, 1.565, 0.082)], Vector3.ZERO, skin, 12)
+	# Tecido irregular e manchas sutis mantêm o figurino desgastado sem sangue.
+	for index in range(3):
+		var x: float = -0.19 + index * 0.19
+		var tail: MeshInstance3D = _oval(visual, Vector3(0.16, 0.14, 0.085), Vector3(x, 0.80 - index * 0.012, -0.107 if index % 2 == 0 else 0.105), green)
+		tail.rotation.z = -0.12 if index % 2 == 0 else 0.10
+	_box(visual, Vector3(0.10, 0.09, 0.012), Vector3(-0.12, 0.96, -0.156), green_faded)
+	_box(visual, Vector3(0.13, 0.08, 0.012), Vector3(0.12, 1.29, 0.149), green_faded)
 	_head = Node3D.new()
 	_head.position = Vector3(0, 1.55, -0.045)
 	_head.rotation = Vector3(0.16, 0, -0.15)
 	visual.add_child(_head)
-	var head: MeshInstance3D = MeshInstance3D.new()
-	var head_mesh: SphereMesh = SphereMesh.new()
-	head_mesh.radius = 0.19
-	head_mesh.height = 0.37
-	head_mesh.radial_segments = 12
-	head_mesh.rings = 6
-	head.mesh = head_mesh
-	head.material_override = skin
-	head.position = Vector3(0, 0.15, 0)
-	_head.add_child(head)
-	_box(_head, Vector3(0.25, 0.07, 0.30), Vector3(-0.025, 0.31, 0.025), hair)
-	_box(_head, Vector3(0.10, 0.08, 0.11), Vector3(0.10, 0.30, 0.065), hair)
+	_oval(_head, Vector3(0.29, 0.34, 0.295), Vector3(0, 0.16, 0), skin)
+	_oval(_head, Vector3(0.205, 0.105, 0.205), Vector3(0, 0.035, -0.025), skin)
+	_oval(_head, Vector3(0.059, 0.095, 0.068), Vector3(0, 0.125, -0.151), skin)
 	for side in [-1.0, 1.0]:
-		_box(_head, Vector3(0.075, 0.07, 0.025), Vector3(side * 0.068, 0.17, -0.177), skin_shadow)
-		_box(_head, Vector3(0.025, 0.032, 0.016), Vector3(side * 0.068, 0.17, -0.194), eye)
-	_box(_head, Vector3(0.11, 0.045, 0.02), Vector3(0, 0.065, -0.18), skin_shadow)
-	_left_leg = _limb(Vector3(-0.16, 0.80, 0), 0.68, 0.18, trousers)
-	_right_leg = _limb(Vector3(0.16, 0.80, 0), 0.68, 0.18, trousers)
-	_box(_left_leg, Vector3(0.19, 0.13, 0.018), Vector3(0, -0.34, -0.098), skin_shadow)
-	_box(_left_leg, Vector3(0.20, 0.13, 0.32), Vector3(0, -0.68, -0.06), shoes)
-	_box(_right_leg, Vector3(0.20, 0.13, 0.30), Vector3(0, -0.68, -0.05), shoes)
-	_left_arm = Node3D.new()
-	_left_arm.position = Vector3(-0.35, 1.39, 0)
-	visual.add_child(_left_arm)
-	_right_arm = Node3D.new()
-	_right_arm.position = Vector3(0.35, 1.39, 0)
-	visual.add_child(_right_arm)
-	_box(_left_arm, Vector3(0.18, 0.24, 0.20), Vector3(0, -0.12, 0), yellow)
-	_box(_right_arm, Vector3(0.18, 0.23, 0.20), Vector3(0, -0.115, 0), green)
-	_box(_right_arm, Vector3(0.19, 0.07, 0.21), Vector3(0, -0.19, 0), yellow)
-	_box(_left_arm, Vector3(0.15, 0.39, 0.15), Vector3(0, -0.42, 0), skin)
-	_box(_right_arm, Vector3(0.15, 0.39, 0.15), Vector3(0, -0.42, 0), skin)
-	for arm: Node3D in [_left_arm, _right_arm]:
-		_box(arm, Vector3(0.16, 0.17, 0.12), Vector3(0, -0.67, -0.025), skin)
-		for finger in range(3):
-			_box(arm, Vector3(0.025, 0.11, 0.03), Vector3(-0.05 + finger * 0.05, -0.79, -0.035), skin_shadow)
+		_oval(_head, Vector3(0.050, 0.089, 0.044), Vector3(side * 0.145, 0.16, 0), skin)
+		_oval(_head, Vector3(0.071, 0.043, 0.019), Vector3(side * 0.061, 0.19, -0.136), skin_shadow)
+		_oval(_head, Vector3(0.020, 0.025, 0.012), Vector3(side * 0.061, 0.19, -0.148), eye)
+	_oval(_head, Vector3(0.083, 0.023, 0.015), Vector3(0, 0.065, -0.135), skin_shadow)
+	# Mechas contínuas substituem o antigo cabelo em blocos.
+	_oval(_head, Vector3(0.285, 0.13, 0.275), Vector3(-0.01, 0.30, 0.015), hair)
+	_oval(_head, Vector3(0.11, 0.12, 0.13), Vector3(0.10, 0.265, 0.07), hair)
+	_oval(_head, Vector3(0.15, 0.16, 0.09), Vector3(-0.065, 0.225, 0.12), hair)
+	_left_leg = _build_leg(-1.0, trousers, shoes, skin_shadow)
+	_right_leg = _build_leg(1.0, trousers, shoes, skin_shadow)
+	_left_arm = _build_arm(-1.0, yellow, green, skin, skin_shadow)
+	_right_arm = _build_arm(1.0, green, yellow, skin, skin_shadow)
 	_ring = MeshInstance3D.new()
 	var ring_mesh: TorusMesh = TorusMesh.new()
 	ring_mesh.inner_radius = 0.43

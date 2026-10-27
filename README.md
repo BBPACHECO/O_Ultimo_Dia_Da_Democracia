@@ -16,11 +16,26 @@ O protótipo inclui caminhada, corrida, combate corpo a corpo, saúde, três zum
 
 ## Baixar no celular
 
-[Baixar APK v0.3.1 — zumbis verdes e amarelos](https://github.com/BBPACHECO/O_Ultimo_Dia_Da_Democracia/raw/refs/heads/main/downloads/o-ultimo-dia-v0.3.1.apk)
+[Baixar APK v0.4.0 — gráficos suavizados](https://github.com/BBPACHECO/O_Ultimo_Dia_Da_Democracia/raw/refs/heads/main/downloads/o-ultimo-dia-v0.4.0.apk)
 
 Abra o link no celular, baixe o arquivo e toque nele para instalar. Se o Android solicitar, autorize a instalação para o aplicativo usado para abrir o APK. Compatível com Android 7.0 ou superior, ARMv7/ARM64 e OpenGL ES 3.0. O jogo funciona offline depois de instalado. A assinatura é de desenvolvimento.
 
-O APK e seu checksum SHA-256 ficam na pasta [`downloads/`](downloads/). Use o celular **na horizontal**. A versão 0.3.1 usa a mesma assinatura e aumenta o código de versão, permitindo atualizar a 0.3.0 sem desinstalar. O progresso anterior é preservado. Para encontrar todos os zumbis ativos, inicie uma nova missão; inimigos já derrotados no save continuam derrotados. A fase 1 da versão 0.2.0 foi testada e aprovada pelo usuário no celular; os novos recursos ainda precisam desse teste em aparelho físico.
+O APK e seu checksum SHA-256 ficam na pasta [`downloads/`](downloads/). Use o celular **na horizontal**. A versão 0.4.0 usa a mesma assinatura e aumenta o código de versão, permitindo atualizar a 0.3.1 sem desinstalar. O progresso anterior é preservado. Para encontrar todos os zumbis ativos, inicie uma nova missão; inimigos já derrotados no save continuam derrotados. A fase 1 da versão 0.2.0 foi testada e aprovada pelo usuário no celular; esta atualização visual ainda precisa desse teste de desempenho no aparelho.
+
+## Gráficos da versão 0.4.0
+
+Personagens agora usam superfícies curvas e perfis de ombros/cintura, com rostos, cabelo, mãos, sapatos e roupas arredondados. As camisas verdes e amarelas dos zumbis foram preservadas. Árvores têm copas orgânicas; fachadas, asfalto, calçadas e objetos usam texturas discretas e bordas suavizadas. A iluminação foi equilibrada e o modo Suave usa antisserrilhamento 2x.
+
+No menu inicial ou na pausa, **Gráficos: Suave / Leve** alterna a qualidade e salva sua preferência. Suave mantém o antisserrilhamento e as sombras principais; Leve desliga esses dois efeitos para reduzir o custo de renderização, mantendo os modelos e as texturas novos. O resultado continua estilizado, sem pretensão de fotorrealismo.
+
+### Comparação real no engine
+
+| Versão 0.3.1 | Versão 0.4.0 |
+| --- | --- |
+| ![Personagens antes](docs/antes-zumbis.png) | ![Personagens depois](docs/zumbis.png) |
+| ![Cenário antes](docs/antes-terceira-pessoa.png) | ![Cenário depois](docs/terceira-pessoa.png) |
+
+As imagens são capturas nativas, com os mesmos personagens e enquadramentos. Foram conferidas com OpenGL por software no host; não representam uma medição de FPS no celular. A geometria e as pequenas texturas originais ficam em cache, e vegetação/janelas continuam agrupadas para limitar o custo.
 
 | Ação | Celular | Computador |
 | --- | --- | --- |
@@ -78,6 +93,7 @@ O preset deixa a execução automática por USB no editor desativada (`runnable=
 ## Organização
 
 - `scripts/game_3d.gd`: missão, interface e pausa.
+- `scripts/art_geometry.gd`: geometria suavizada compartilhada, materiais e texturas originais de 128 px.
 - `scripts/player_3d.gd`: personagem físico, animação e câmera.
 - `scripts/touch_controls.gd`: joystick, câmera e ações com multitoque.
 - `scripts/city_world.gd`: cenário original, colisões e patrulhas.
@@ -93,4 +109,4 @@ O salvamento 3D fica em `user://mission_3d_v2.json`, no armazenamento privado do
 
 A imagem acima é uma captura real do engine usando OpenGL por software, sem navegador. `tools/capture_screens.gd` pode repetir a inspeção em uma sessão gráfica. As fontes DejaVu são acompanhadas de sua licença, incluída no APK.
 
-Os arquivos da versão 0.1.0 de alternativas permanecem como código legado, sem participar da experiência principal. A fase 1 da versão 0.2.0 e os diálogos/combate da 0.3.0 foram preservados; a 0.3.1 substitui os guardas por zumbis conforme a preferência do usuário.
+Os arquivos da versão 0.1.0 de alternativas permanecem como código legado, sem participar da experiência principal. A fase 1, os diálogos, o combate e os zumbis foram preservados. A 0.4.0 muda a apresentação visual e inclui a preferência de qualidade gráfica.

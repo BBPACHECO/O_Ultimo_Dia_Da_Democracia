@@ -16,14 +16,27 @@ func capture(filename: String) -> void:
 	if result != OK:
 		printerr("Falha ao capturar: " + filename)
 		quit(1)
+	if filename == "02-terceira-pessoa.png":
+		var budget: Dictionary = {
+			"renderer": "OpenGL Compatibility",
+			"quality": game.graphics_quality,
+			"objects": RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME),
+			"primitives": RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME),
+			"draw_calls": RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
+		}
+		var file: FileAccess = FileAccess.open("res://builds/render-budget.json", FileAccess.WRITE)
+		file.store_string(JSON.stringify(budget, "  "))
+		file.close()
 
 
 func _run() -> void:
 	DirAccess.make_dir_recursive_absolute("res://builds/screenshots")
 	game = MAIN.instantiate()
 	game.mission.save_path = "user://screenshot_3d_save.json"
+	game.graphics_settings_path = "user://screenshot_graphics.cfg"
 	_cleanup()
 	root.add_child(game)
+	game.set_graphics_quality("smooth", false)
 	await capture("01-inicio-3d.png")
 	game.start_mission()
 	await capture("02-terceira-pessoa.png")
@@ -99,3 +112,5 @@ func _cleanup() -> void:
 		var path: String = "user://screenshot_3d_save.json" + suffix
 		if FileAccess.file_exists(path):
 			DirAccess.remove_absolute(path)
+	if FileAccess.file_exists("user://screenshot_graphics.cfg"):
+		DirAccess.remove_absolute("user://screenshot_graphics.cfg")

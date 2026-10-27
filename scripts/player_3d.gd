@@ -1,6 +1,8 @@
 extends CharacterBody3D
 ## Personagem e câmera em terceira pessoa, renderizados pelo engine nativo.
 
+const Art = preload("res://scripts/art_geometry.gd")
+
 const WALK_SPEED: float = 5.0
 const RUN_SPEED: float = 8.0
 const ACCELERATION: float = 22.0
@@ -57,68 +59,51 @@ func _ready() -> void:
 	_build_silhouette()
 
 
-func _material(color: Color, roughness: float = 0.88) -> StandardMaterial3D:
-	var material = StandardMaterial3D.new()
-	material.albedo_color = color
+func _material(color: Color, roughness: float = 0.88, kind: String = "cloth") -> StandardMaterial3D:
+	var material: StandardMaterial3D = Art.surface(color, kind).duplicate() as StandardMaterial3D
 	material.roughness = roughness
 	_character_materials.append(material)
 	_material_colors.append(color)
 	return material
 
 
-func _cylinder(parent: Node3D, radius: float, height: float, at: Vector3, material: Material, top_radius: float = -1.0) -> MeshInstance3D:
+func _mesh(parent: Node3D, mesh: Mesh, at: Vector3, material: Material) -> MeshInstance3D:
 	var instance: MeshInstance3D = MeshInstance3D.new()
-	var mesh: CylinderMesh = CylinderMesh.new()
-	mesh.top_radius = radius if top_radius < 0.0 else top_radius
-	mesh.bottom_radius = radius
-	mesh.height = height
-	mesh.radial_segments = 10
 	instance.mesh = mesh
 	instance.material_override = material
 	instance.position = at
 	parent.add_child(instance)
 	return instance
+
+
+func _cylinder(parent: Node3D, radius: float, height: float, at: Vector3, material: Material, top_radius: float = -1.0) -> MeshInstance3D:
+	var top: float = radius if top_radius < 0.0 else top_radius
+	var rings: Array[Vector3] = [Vector3(radius, -height * 0.5, radius), Vector3(top, height * 0.5, top)]
+	return _mesh(parent, Art.profile(rings, 16), at, material)
 
 
 func _box(parent: Node3D, dimensions: Vector3, at: Vector3, material: Material) -> MeshInstance3D:
-	var instance = MeshInstance3D.new()
-	var mesh = BoxMesh.new()
-	mesh.size = dimensions
-	instance.mesh = mesh
-	instance.material_override = material
-	instance.position = at
-	parent.add_child(instance)
-	return instance
+	return _mesh(parent, Art.rounded_box(dimensions, minf(0.045, minf(dimensions.x, minf(dimensions.y, dimensions.z)) * 0.24)), at, material)
 
 
 func _sphere(parent: Node3D, radius: float, height: float, at: Vector3, material: Material) -> MeshInstance3D:
-	var instance = MeshInstance3D.new()
-	var mesh = SphereMesh.new()
-	mesh.radius = radius
-	mesh.height = height
-	mesh.radial_segments = 12
-	mesh.rings = 6
-	instance.mesh = mesh
-	instance.material_override = material
-	instance.position = at
-	parent.add_child(instance)
-	return instance
+	return _mesh(parent, Art.ellipsoid(Vector3(radius * 2.0, height, radius * 2.0)), at, material)
 
 
 func _limb(parent: Node3D, at: Vector3, length: float, width: float, material: Material) -> Node3D:
-	var pivot = Node3D.new()
+	var pivot: Node3D = Node3D.new()
 	pivot.position = at
 	parent.add_child(pivot)
-	var instance: MeshInstance3D = MeshInstance3D.new()
-	var mesh: CapsuleMesh = CapsuleMesh.new()
-	mesh.radius = width * 0.5
-	mesh.height = length
-	mesh.radial_segments = 10
-	mesh.rings = 3
-	instance.mesh = mesh
-	instance.material_override = material
-	instance.position.y = -length * 0.5
-	pivot.add_child(instance)
+	# A discrete knee/elbow and tapered ankle/wrist replace the capsule silhouette.
+	var rings: Array[Vector3] = [
+		Vector3(width * 0.28, -length, width * 0.28),
+		Vector3(width * 0.37, -length * 0.87, width * 0.36),
+		Vector3(width * 0.46, -length * 0.58, width * 0.43),
+		Vector3(width * 0.43, -length * 0.47, width * 0.40),
+		Vector3(width * 0.57, -length * 0.20, width * 0.48),
+		Vector3(width * 0.48, 0.0, width * 0.44),
+	]
+	_mesh(pivot, Art.profile(rings, 16), Vector3.ZERO, material)
 	return pivot
 
 
@@ -126,47 +111,51 @@ func _build_character() -> void:
 	visual = Node3D.new()
 	visual.name = "Reporter"
 	add_child(visual)
-	var coat = _material(Color("9a9673"))
-	var coat_shadow = _material(Color("696c54"))
-	var trousers = _material(Color("383d3d"))
-	var shoes = _material(Color("242926"))
-	var skin = _material(Color("b58e70"))
-	var hair = _material(Color("34342f"))
-	var bag = _material(Color("766049"))
-	var strap = _material(Color("342d2a"))
-	var paper = _material(Color("efe1bd"))
-	var torso: MeshInstance3D = _cylinder(visual, 0.30, 0.76, Vector3(0, 1.20, 0), coat, 0.32)
-	torso.scale.z = 0.70
-	var hem: MeshInstance3D = _cylinder(visual, 0.31, 0.16, Vector3(0, 0.88, 0), coat_shadow, 0.30)
-	hem.scale.z = 0.72
-	# Costura central e lapelas ajudam a ler a silhueta por frente e por trás.
-	_box(visual, Vector3(0.024, 0.65, 0.015), Vector3(0, 1.20, -0.22), coat_shadow)
-	for side in [-1.0, 1.0]:
-		var lapel = _box(visual, Vector3(0.14, 0.24, 0.025), Vector3(side * 0.10, 1.48, -0.22), coat_shadow)
-		lapel.rotation.z = side * -0.25
-	_box(visual, Vector3(0.17, 0.18, 0.17), Vector3(0, 1.63, 0), skin)
-	_sphere(visual, 0.19, 0.40, Vector3(0, 1.83, 0), skin)
-	var haircut: MeshInstance3D = _sphere(visual, 0.195, 0.22, Vector3(0, 1.96, 0.025), hair)
-	haircut.scale.z = 0.93
-	_box(visual, Vector3(0.30, 0.16, 0.075), Vector3(0, 1.89, 0.15), hair)
-	_sphere(visual, 0.035, 0.07, Vector3(0, 1.81, -0.19), skin)
-	for side in [-1.0, 1.0]:
-		_box(visual, Vector3(0.030, 0.025, 0.018), Vector3(side * 0.067, 1.86, -0.174), hair)
-	# Mochila de trabalho e caderno: o protagonista é um repórter, não um soldado.
-	var backpack: MeshInstance3D = _cylinder(visual, 0.24, 0.49, Vector3(0, 1.25, 0.29), bag)
-	backpack.scale.z = 0.56
-	_box(visual, Vector3(0.29, 0.17, 0.025), Vector3(0, 1.12, 0.43), coat_shadow)
-	for side in [-1.0, 1.0]:
-		_box(visual, Vector3(0.065, 0.69, 0.06), Vector3(side * 0.22, 1.26, 0.21), strap)
-	_box(visual, Vector3(0.14, 0.18, 0.05), Vector3(0.20, 1.19, -0.24), paper)
-	_left_leg = _limb(visual, Vector3(-0.16, 0.84, 0), 0.71, 0.20, trousers)
-	_right_leg = _limb(visual, Vector3(0.16, 0.84, 0), 0.71, 0.20, trousers)
-	_box(_left_leg, Vector3(0.21, 0.13, 0.31), Vector3(0, -0.73, -0.06), shoes)
-	_box(_right_leg, Vector3(0.21, 0.13, 0.31), Vector3(0, -0.73, -0.06), shoes)
-	_left_arm = _limb(visual, Vector3(-0.37, 1.48, 0), 0.59, 0.18, coat)
-	_right_arm = _limb(visual, Vector3(0.37, 1.48, 0), 0.59, 0.18, coat)
-	_sphere(_left_arm, 0.085, 0.17, Vector3(0, -0.62, 0), skin)
-	_sphere(_right_arm, 0.085, 0.17, Vector3(0, -0.62, 0), skin)
+	var coat: Material = _material(Color("8f9076"), 0.90)
+	var coat_shadow: Material = _material(Color("626a55"), 0.92)
+	var trousers: Material = _material(Color("333d3c"), 0.93)
+	var shoes: Material = _material(Color("252b29"), 0.82, "plain")
+	var skin: Material = _material(Color("b58e70"), 0.72, "skin")
+	var hair: Material = _material(Color("34332e"), 0.87, "plain")
+	var bag: Material = _material(Color("776149"), 0.90)
+	var strap: Material = _material(Color("3e3930"), 0.90)
+	var paper: Material = _material(Color("d8d2b9"), 0.97, "plain")
+	var torso: Array[Vector3] = [
+		Vector3(0.27, 0.84, 0.185), Vector3(0.285, 0.94, 0.19),
+		Vector3(0.24, 1.09, 0.165), Vector3(0.27, 1.28, 0.185),
+		Vector3(0.32, 1.43, 0.17), Vector3(0.285, 1.51, 0.145),
+		Vector3(0.12, 1.56, 0.105),
+	]
+	_mesh(visual, Art.profile(torso), Vector3.ZERO, coat)
+	# Tailored lapels and cuff folds retain detail without a box-shaped chest.
+	_box(visual, Vector3(0.018, 0.51, 0.013), Vector3(0, 1.15, -0.186), coat_shadow)
+	for side: float in [-1.0, 1.0]:
+		var lapel: MeshInstance3D = _box(visual, Vector3(0.10, 0.21, 0.022), Vector3(side * 0.083, 1.40, -0.169), coat_shadow)
+		lapel.rotation.z = side * -0.23
+		_box(visual, Vector3(0.115, 0.08, 0.025), Vector3(side * 0.15, 1.02, -0.183), coat_shadow)
+	_mesh(visual, Art.capsule(0.075, 0.19), Vector3(0, 1.58, 0), skin)
+	_mesh(visual, Art.ellipsoid(Vector3(0.335, 0.37, 0.32)), Vector3(0, 1.79, -0.005), skin)
+	_mesh(visual, Art.ellipsoid(Vector3(0.348, 0.19, 0.33)), Vector3(0, 1.93, 0.018), hair)
+	_mesh(visual, Art.ellipsoid(Vector3(0.30, 0.19, 0.11)), Vector3(0, 1.83, 0.13), hair)
+	_mesh(visual, Art.ellipsoid(Vector3(0.052, 0.075, 0.063)), Vector3(0, 1.77, -0.17), skin)
+	for side: float in [-1.0, 1.0]:
+		_mesh(visual, Art.ellipsoid(Vector3(0.055, 0.085, 0.045)), Vector3(side * 0.167, 1.79, 0), skin)
+		_box(visual, Vector3(0.031, 0.018, 0.015), Vector3(side * 0.061, 1.82, -0.157), hair)
+	# Rounded padded backpack, piping and narrow shoulder straps.
+	_box(visual, Vector3(0.40, 0.47, 0.22), Vector3(0, 1.22, 0.26), bag)
+	_box(visual, Vector3(0.29, 0.17, 0.040), Vector3(0, 1.10, 0.379), coat_shadow)
+	for side: float in [-1.0, 1.0]:
+		_box(visual, Vector3(0.045, 0.61, 0.035), Vector3(side * 0.21, 1.25, 0.15), strap)
+	_box(visual, Vector3(0.12, 0.17, 0.035), Vector3(0.18, 1.17, -0.19), paper)
+	_left_leg = _limb(visual, Vector3(-0.14, 0.84, 0), 0.72, 0.20, trousers)
+	_right_leg = _limb(visual, Vector3(0.14, 0.84, 0), 0.72, 0.20, trousers)
+	for leg: Node3D in [_left_leg, _right_leg]:
+		_mesh(leg, Art.ellipsoid(Vector3(0.19, 0.14, 0.32)), Vector3(0, -0.74, -0.055), shoes)
+	_left_arm = _limb(visual, Vector3(-0.345, 1.43, 0), 0.56, 0.18, coat)
+	_right_arm = _limb(visual, Vector3(0.345, 1.43, 0), 0.56, 0.18, coat)
+	for arm: Node3D in [_left_arm, _right_arm]:
+		_box(arm, Vector3(0.14, 0.045, 0.14), Vector3(0, -0.51, 0), coat_shadow)
+		_mesh(arm, Art.ellipsoid(Vector3(0.125, 0.175, 0.09)), Vector3(0, -0.61, -0.012), skin)
 
 
 func _build_camera() -> void:

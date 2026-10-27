@@ -47,6 +47,9 @@ var dialogue_index: int = 0
 var _dialogue_npc: Node3D
 var _dialogue_book = Dialogues.new()
 var _attack_cooldown: float = 0.0
+var graphics_quality: String = "smooth"
+var graphics_settings_path: String = "user://graphics_settings.cfg"
+var _quality_buttons: Array[Button] = []
 
 
 func _ready() -> void:
@@ -58,6 +61,7 @@ func _ready() -> void:
 	player.reset_player(world.spawn_point)
 	_spawn_actors()
 	_build_interface()
+	_load_graphics_quality()
 	_apply_safe_area()
 	get_viewport().size_changed.connect(_apply_safe_area)
 	if mission.load_game() and mission.outcome.is_empty():
@@ -85,6 +89,51 @@ func _reset_world() -> void:
 		radar.world = world
 	if is_instance_valid(player):
 		_spawn_actors()
+	_apply_world_graphics()
+
+
+func _load_graphics_quality() -> void:
+	var config: ConfigFile = ConfigFile.new()
+	if config.load(graphics_settings_path) == OK:
+		var value: Variant = config.get_value("graphics", "quality", "smooth")
+		if value is String and value in ["smooth", "light"]:
+			graphics_quality = value
+	set_graphics_quality(graphics_quality, false)
+
+
+func set_graphics_quality(value: String, persist: bool = true) -> void:
+	if value not in ["smooth", "light"]:
+		return
+	graphics_quality = value
+	get_viewport().msaa_3d = Viewport.MSAA_2X if value == "smooth" else Viewport.MSAA_DISABLED
+	_apply_world_graphics()
+	for button: Button in _quality_buttons:
+		button.text = "Gráficos: %s  ⇄" % ("Suave" if value == "smooth" else "Leve")
+	if persist:
+		var config: ConfigFile = ConfigFile.new()
+		config.load(graphics_settings_path)
+		config.set_value("graphics", "quality", graphics_quality)
+		if config.save(graphics_settings_path) != OK:
+			_message("A qualidade foi alterada, mas não foi possível salvar essa preferência.", 5.0)
+
+
+func _apply_world_graphics() -> void:
+	if not is_instance_valid(world):
+		return
+	if world.has_method("set_graphics_quality"):
+		world.set_graphics_quality(graphics_quality == "smooth")
+	else:
+		for light: DirectionalLight3D in world.find_children("*", "DirectionalLight3D", true, false):
+			light.shadow_enabled = graphics_quality == "smooth"
+
+
+func _quality_button() -> Button:
+	var button: Button = _button("Gráficos: Suave  ⇄", func() -> void:
+		set_graphics_quality("light" if graphics_quality == "smooth" else "smooth")
+	)
+	button.name = "GraphicsQualityButton"
+	_quality_buttons.append(button)
+	return button
 
 
 func _spawn_actors() -> void:
@@ -697,6 +746,7 @@ func _build_interface() -> void:
 	var start_button: Button = _button("Iniciar missão   →", _request_start, true)
 	start_button.name = "StartMissionButton"
 	home.add_child(start_button)
+	home.add_child(_quality_button())
 	home.add_child(_label("TOQUE  Joystick · Arraste para olhar · ATACAR · VISÃO\nPC  WASD · Shift · E conversa/ação · Espaço ataque · F câmera", 15, Color("a7bcbd")))
 	home.add_child(_label("Uma história fictícia. Jogue offline, no seu celular.", 15, GOLD))
 	pause_panel = _overlay(root_ui, "PauseScreen")
@@ -705,6 +755,7 @@ func _build_interface() -> void:
 	pause.add_child(_headline("Respire.\nAurora espera."))
 	pause.add_child(_label("A missão e as patrulhas ficam pausadas enquanto esta tela estiver aberta.", 22))
 	pause.add_child(_button("Voltar à missão", resume_mission, true))
+	pause.add_child(_quality_button())
 	pause.add_child(_button("Voltar ao menu", show_home))
 	result_panel = _overlay(root_ui, "ResultScreen")
 	var result: VBoxContainer = _column(result_panel)

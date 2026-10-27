@@ -1,5 +1,6 @@
 extends Node3D
 ## Cidade original construída com geometria nativa. Sem assets ou serviços remotos.
+const Art = preload("res://scripts/art_geometry.gd")
 
 var spawn_point: Vector3 = Vector3(0.0, 0.0, 16.0)
 var tower_point: Vector3 = Vector3(0.0, 0.0, -24.0)
@@ -31,6 +32,9 @@ var _materials: Dictionary = {}
 var _window_transforms: Array[Transform3D] = []
 var _frame_transforms: Array[Transform3D] = []
 var _patrol_origins: Array[Vector3] = []
+var _leaf_transforms: Array[Transform3D] = []
+var _leaf_colors: Array[Color] = []
+var _main_light: DirectionalLight3D
 
 
 func _ready() -> void:
@@ -40,9 +44,34 @@ func _ready() -> void:
 func _material(key: String, color: Color, emissive: float = 0.0) -> StandardMaterial3D:
 	if _materials.has(key):
 		return _materials[key] as StandardMaterial3D
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.92
+	var kind: String = "plain"
+	if key.begins_with("building_") or key in ["foundation", "trim"]:
+		kind = "plaster"
+	elif key in ["road", "asphalt_patch"]:
+		kind = "asphalt"
+	elif key in ["sidewalk", "paving_joints"]:
+		kind = "paving"
+	elif key in ["ground", "curb", "planter", "tower_stone", "garden_soil", "roof"]:
+		kind = "stone"
+	elif key in ["bench", "crate_wood", "evidence_table"]:
+		kind = "wood"
+	elif key == "tree_trunk":
+		kind = "bark"
+	elif key in ["tree_crown", "leaf"]:
+		kind = "leaf"
+	elif key.contains("metal") or key.contains("pipe") or key.contains("copper") or key == "garden_fence":
+		kind = "metal"
+	var material: StandardMaterial3D = Art.surface(color, kind)
+	if kind == "asphalt":
+		material.uv1_scale = Vector3(28, 76, 1)
+	elif key == "sidewalk":
+		material.uv1_scale = Vector3(8, 32, 1)
+	elif kind == "plaster":
+		material.uv1_scale = Vector3(5, 4, 1)
+	elif kind == "wood":
+		material.uv1_scale = Vector3(3, 1, 1)
+	elif key == "ground":
+		material.uv1_scale = Vector3(40, 40, 1)
 	if emissive > 0.0:
 		material.emission_enabled = true
 		material.emission = color
@@ -52,8 +81,15 @@ func _material(key: String, color: Color, emissive: float = 0.0) -> StandardMate
 
 
 func _box(parent: Node3D, at: Vector3, dimensions: Vector3, material: Material, collision: bool = false) -> MeshInstance3D:
-	var mesh := BoxMesh.new()
-	mesh.size = dimensions
+	var mesh: Mesh
+	var smallest: float = minf(dimensions.x, minf(dimensions.y, dimensions.z))
+	var largest: float = maxf(dimensions.x, maxf(dimensions.y, dimensions.z))
+	if smallest >= 0.075 and largest < 45.0:
+		mesh = Art.rounded_box(dimensions, clampf(smallest * 0.16, 0.012, 0.16))
+	else:
+		var flat: BoxMesh = BoxMesh.new()
+		flat.size = dimensions
+		mesh = flat
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh
 	instance.material_override = material
@@ -76,7 +112,7 @@ func _cylinder(parent: Node3D, at: Vector3, radius: float, height: float, materi
 	mesh.top_radius = radius if top_radius < 0.0 else top_radius
 	mesh.bottom_radius = radius
 	mesh.height = height
-	mesh.radial_segments = 10
+	mesh.radial_segments = 20
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh
 	instance.material_override = material
@@ -151,6 +187,7 @@ func build_world() -> void:
 	_street_details()
 	_gardens()
 	_public_props()
+	_foliage_batch()
 	_label(self, Vector3(0, 4.5, 18), "PRAÇA DA AURORA", 42)
 	for data: Dictionary in evidence_points:
 		_evidence(data)
@@ -177,11 +214,11 @@ func _lighting() -> void:
 	environment.background_mode = Environment.BG_SKY
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color("bdc3aa")
+	environment.ambient_light_color = Color("b7c7cc")
 	environment.ambient_light_energy = 0.48
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.fog_enabled = true
-	environment.fog_light_color = Color("77846f")
+	environment.fog_light_color = Color("8b9a93")
 	environment.fog_light_energy = 0.4
 	environment.fog_density = 0.004
 	environment_node.environment = environment
@@ -189,12 +226,21 @@ func _lighting() -> void:
 	var moon := DirectionalLight3D.new()
 	moon.name = "LuzDaCidade"
 	moon.rotation_degrees = Vector3(-48, -30, 0)
-	moon.light_color = Color("f3d8af")
-	moon.light_energy = 0.55
+	moon.light_color = Color("fff1dc")
+	moon.light_energy = 0.68
 	moon.shadow_enabled = true
-	moon.directional_shadow_max_distance = 45.0
-	moon.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+	# Evita auto-sombreamento em faixas nas superfícies planas do GLES3.
+	moon.shadow_bias = 0.12
+	moon.shadow_normal_bias = 1.2
+	moon.directional_shadow_max_distance = 38.0
+	moon.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	add_child(moon)
+	_main_light = moon
+
+
+func set_graphics_quality(smooth: bool) -> void:
+	if is_instance_valid(_main_light):
+		_main_light.shadow_enabled = smooth
 
 
 func _building(at: Vector3, dimensions: Vector3, color: Color, sign: String, faces_east: bool) -> void:
@@ -208,7 +254,8 @@ func _building(at: Vector3, dimensions: Vector3, color: Color, sign: String, fac
 		for corner_z in [-1.0, 1.0]:
 			_box(self, at + Vector3(corner_x * dimensions.x * 0.5, dimensions.y * 0.5, corner_z * dimensions.z * 0.5), Vector3(0.16, dimensions.y, 0.16), _material("trim", Color("b1ad92")))
 	# Caixa d'água e dutos, em vez de uma laje totalmente vazia.
-	_box(self, at + Vector3(-dimensions.x * 0.22, dimensions.y + 0.65, 0), Vector3(1.5, 1, 1.5), _material("roof_utility", Color("7b8070")))
+	_cylinder(self, at + Vector3(-dimensions.x * 0.22, dimensions.y + 0.65, 0), 0.70, 1.0, _material("roof_utility", Color("7b8070")), 0.64)
+	_cylinder(self, at + Vector3(-dimensions.x * 0.22, dimensions.y + 1.18, 0), 0.73, 0.10, _material("tank_lid", Color("59675e")))
 	_cylinder(self, at + Vector3(dimensions.x * 0.22, dimensions.y + 0.65, -dimensions.z * 0.24), 0.28, 1.0, _material("pipe", Color("606956")))
 	var facade_x := at.x + (dimensions.x / 2.0 + 0.05) * (1 if faces_east else -1)
 	var facade_normal := Vector3.RIGHT if faces_east else Vector3.LEFT
@@ -246,15 +293,23 @@ func _add_window(at: Vector3, dimensions: Vector3, facing: Vector3) -> void:
 func _window_batch() -> void:
 	var multimesh := MultiMesh.new()
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	multimesh.use_colors = true
 	var mesh := BoxMesh.new()
 	mesh.size = Vector3.ONE
 	multimesh.mesh = mesh
 	multimesh.instance_count = _window_transforms.size()
 	for index in range(_window_transforms.size()):
 		multimesh.set_instance_transform(index, _window_transforms[index])
+		# Vidro com profundidade visual, e só algumas janelas ainda iluminadas.
+		var pane_color: Color = Color("d2bd8b") if index % 9 == 0 else Color("344e50").lerp(Color("789092"), float(index % 4) / 5.0)
+		multimesh.set_instance_color(index, pane_color)
 	var windows := MultiMeshInstance3D.new()
 	windows.multimesh = multimesh
-	windows.material_override = _material("window", Color("9da78b"), 0.08)
+	var glass: StandardMaterial3D = Art.surface(Color.WHITE, "metal")
+	glass.vertex_color_use_as_albedo = true
+	glass.roughness = 0.28
+	glass.metallic = 0.20
+	windows.material_override = glass
 	windows.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(windows)
 	_batch_boxes("WindowFrames", _frame_transforms, _material("window_frames", Color("535e4d")))
@@ -312,19 +367,61 @@ func _lamp(at: Vector3) -> void:
 
 
 func _tree(at: Vector3) -> void:
-	_cylinder(self, at + Vector3(0, 1.1, 0), 0.16, 2.2, _material("tree_trunk", Color("79674e")))
-	var crown_mesh := SphereMesh.new()
-	crown_mesh.radius = 1.25
-	crown_mesh.height = 2.1
-	crown_mesh.radial_segments = 7
-	crown_mesh.rings = 3
-	for offset in [Vector3(-0.65, 2.7, 0.05), Vector3(0.6, 2.85, 0.1), Vector3(0, 3.55, -0.1)]:
-		var crown := MeshInstance3D.new()
-		crown.mesh = crown_mesh
-		crown.position = at + offset
-		crown.material_override = _material("tree_crown", Color("657c49"))
-		add_child(crown)
+	var bark: StandardMaterial3D = _material("tree_trunk", Color("796b56"))
+	var trunk: MeshInstance3D = MeshInstance3D.new()
+	var profile: Array[Vector3] = [Vector3(0.22, 0.0, 0.19), Vector3(0.15, 0.65, 0.14), Vector3(0.125, 1.6, 0.11), Vector3(0.08, 2.8, 0.075)]
+	trunk.mesh = Art.profile(profile, 16)
+	trunk.position = at
+	trunk.material_override = bark
+	add_child(trunk)
+	_branch(at + Vector3(0, 1.8, 0), at + Vector3(-0.75, 2.65, 0.1), bark)
+	_branch(at + Vector3(0, 2.1, 0), at + Vector3(0.70, 2.85, 0.1), bark)
+	var random: RandomNumberGenerator = RandomNumberGenerator.new()
+	random.seed = absi(hash(at))
+	var lobes: Array[Vector3] = [
+		Vector3(-0.70, 2.65, 0.05), Vector3(0.65, 2.8, 0.15),
+		Vector3(-0.15, 3.35, -0.15), Vector3(-0.3, 3.0, 0.6),
+		Vector3(0.45, 3.15, -0.45), Vector3(-0.75, 3.1, -0.4),
+		Vector3(0.4, 3.7, 0.1), Vector3(0.1, 2.65, -0.65),
+	]
+	for offset: Vector3 in lobes:
+		var leaf_size: Vector3 = Vector3(random.randf_range(1.7, 2.3), random.randf_range(1.35, 1.85), random.randf_range(1.55, 2.0))
+		var basis: Basis = Basis.from_euler(Vector3(random.randf_range(-0.15, 0.15), random.randf_range(0, TAU), random.randf_range(-0.15, 0.15)))
+		_leaf_transforms.append(Transform3D(basis.scaled(leaf_size), at + offset))
+		_leaf_colors.append(Color("3d6041").lerp(Color("82975b"), random.randf_range(0.18, 0.9)))
+	var shadow: Sprite3D = Sprite3D.new()
+	shadow.texture = Art.shadow_texture()
+	shadow.pixel_size = 3.8 / 64.0
+	shadow.rotation.x = -PI * 0.5
+	shadow.position = at + Vector3(0, 0.095, 0)
+	shadow.shaded = false
+	shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(shadow)
 	_box(self, at + Vector3(0, 0.12, 0), Vector3(2, 0.24, 2), _material("planter", Color("92907a")), true)
+
+
+func _branch(from: Vector3, to: Vector3, material: Material) -> void:
+	var direction: Vector3 = to - from
+	var branch: MeshInstance3D = _cylinder(self, (from + to) * 0.5, 0.08, direction.length(), material, 0.045)
+	branch.basis = Basis(Quaternion(Vector3.UP, direction.normalized()))
+
+
+func _foliage_batch() -> void:
+	var batch: MultiMesh = MultiMesh.new()
+	batch.transform_format = MultiMesh.TRANSFORM_3D
+	batch.use_colors = true
+	batch.mesh = Art.ellipsoid(Vector3.ONE)
+	batch.instance_count = _leaf_transforms.size()
+	for index in range(_leaf_transforms.size()):
+		batch.set_instance_transform(index, _leaf_transforms[index])
+		batch.set_instance_color(index, _leaf_colors[index])
+	var leaves: MultiMeshInstance3D = MultiMeshInstance3D.new()
+	leaves.name = "SmoothTreeCrowns"
+	leaves.multimesh = batch
+	var material: StandardMaterial3D = Art.surface(Color.WHITE, "leaf")
+	material.vertex_color_use_as_albedo = true
+	leaves.material_override = material
+	add_child(leaves)
 
 
 func _batch_boxes(node_name: String, transforms: Array[Transform3D], material: Material) -> void:
@@ -441,11 +538,7 @@ func _gardens() -> void:
 
 
 func _shrub_batch() -> void:
-	var shrub_mesh := SphereMesh.new()
-	shrub_mesh.radius = 0.62
-	shrub_mesh.height = 0.8
-	shrub_mesh.radial_segments = 7
-	shrub_mesh.rings = 3
+	var shrub_mesh: Mesh = Art.ellipsoid(Vector3(1.25, 0.85, 1.1))
 	var batch := MultiMesh.new()
 	batch.transform_format = MultiMesh.TRANSFORM_3D
 	batch.use_colors = true
@@ -456,7 +549,7 @@ func _shrub_batch() -> void:
 		var z: float = 18.0 + float(index % 14) * 0.9
 		batch.set_instance_transform(index, Transform3D(Basis.IDENTITY.scaled(Vector3(1.0, 0.8 + float(index % 3) * 0.1, 1.0)), Vector3(x, 0.42, z)))
 		batch.set_instance_color(index, Color("6a7e4b") if index % 3 == 0 else Color("526b40"))
-	var material := StandardMaterial3D.new()
+	var material: StandardMaterial3D = Art.surface(Color.WHITE, "leaf")
 	material.vertex_color_use_as_albedo = true
 	material.roughness = 1.0
 	var instance := MultiMeshInstance3D.new()

@@ -1,5 +1,6 @@
 .godot/
 builds/
+docs/*.import
 .DS_Store
 *.keystore
 *.jks

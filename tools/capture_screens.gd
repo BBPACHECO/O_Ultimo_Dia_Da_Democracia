@@ -55,11 +55,39 @@ func _run() -> void:
 	game.interact()
 	await capture("05-prova-recolhida.png")
 	for point: Dictionary in game.world.evidence_points:
+		if point["id"] in game.mission.collected:
+			continue
 		game.player.reset_player(point["position"] + Vector3(0, 0.1, 1.5))
 		game.interact()
 	game.player.reset_player(game.world.tower_point + Vector3(0, 0.1, 2))
 	game.interact()
+	if game.mission.outcome != "transmitted":
+		printerr("A captura da missão não chegou à transmissão.")
+		_cleanup()
+		quit(1)
+		return
 	await capture("06-transmissao.png")
+	# Inspeção do figurino dos personagens reais do jogo, sem alterar o save.
+	game.hud.visible = false
+	game.controls.visible = false
+	game.result_panel.visible = false
+	game.dialogue_panel.visible = false
+	game.home_panel.visible = false
+	game.pause_panel.visible = false
+	game.player.visible = false
+	for index in range(game.enemies.size()):
+		var enemy: Node3D = game.enemies[index]
+		enemy.set_active(false)
+		enemy.position = Vector3(-1.6 + index * 1.6, 0.1, 5)
+		enemy.visual.rotation = Vector3.ZERO
+		enemy._update_visual(0.0)
+	var wardrobe_camera: Camera3D = Camera3D.new()
+	game.add_child(wardrobe_camera)
+	wardrobe_camera.position = Vector3(0, 2.0, -0.5)
+	wardrobe_camera.fov = 44.0
+	wardrobe_camera.look_at(Vector3(0, 1.05, 5))
+	wardrobe_camera.current = true
+	await capture("07-zumbis.png")
 	_cleanup()
 	game.queue_free()
 	await process_frame

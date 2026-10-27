@@ -1,24 +1,26 @@
 # O Último Dia da Democracia
 
-**Jogo 3D de exploração e ação para Android**, em português, feito com Godot 4.6.3 e GDScript. Você controla um repórter nas ruas de Aurora, conversa com moradores e enfrenta ou evita guardas para reunir provas. A câmera em três quartos, a paleta e a vegetação foram inspiradas na referência visual de Project Zomboid, com arte original. O botão **VISÃO** alterna para a câmera de terceira pessoa mais próxima. Funciona offline, sem navegador ou WebView.
+**Jogo 3D de exploração e ação para Android**, em português, feito com Godot 4.6.3 e GDScript. Você controla um repórter nas ruas de Aurora, conversa com sobreviventes e enfrenta ou evita zumbis com camisas verdes e amarelas para reunir provas. A câmera em três quartos, a paleta e a vegetação foram inspiradas na referência visual de Project Zomboid, com arte original. O botão **VISÃO** alterna para a câmera de terceira pessoa mais próxima. Funciona offline, sem navegador ou WebView.
 
 ## A missão em terceira pessoa
 
 Faltam cinco minutos para a meia-noite. Explore Aurora, reúna três provas e leve o dossiê ao terminal da torre de transmissão. Os documentos estão no Arquivo Municipal, na estação de rádio e na última redação. Drones patrulham a região: mantenha distância ou use os edifícios como cobertura para reduzir o alerta.
 
-O protótipo inclui caminhada, corrida, combate corpo a corpo, saúde, três guardas humanos com patrulha/perseguição/ataques anunciados, drones, três moradores com diálogos contextuais, mapa, prazo, pausa e salvamento local. Paredes bloqueiam ataques e a visão dos inimigos. É uma pequena área de exploração jogável, ainda em desenvolvimento.
+O protótipo inclui caminhada, corrida, combate corpo a corpo, saúde, três zumbis com camisas verdes e amarelas que vagam, perseguem e atacam, drones, três sobreviventes com diálogos contextuais, mapa, prazo, pausa e salvamento local. Paredes bloqueiam ataques e a visão dos inimigos. É uma pequena área de exploração jogável, ainda em desenvolvimento.
 
 ![Captura real do protótipo em terceira pessoa](docs/terceira-pessoa.png)
+
+![Zumbis com camisas verdes e amarelas no engine nativo](docs/zumbis.png)
 
 É um protótipo jogável original. O cenário e os personagens são fictícios.
 
 ## Baixar no celular
 
-[Baixar APK v0.3.0 — ação e diálogos](https://github.com/BBPACHECO/O_Ultimo_Dia_Da_Democracia/raw/refs/heads/main/downloads/o-ultimo-dia-v0.3.0.apk)
+[Baixar APK v0.3.1 — zumbis verdes e amarelos](https://github.com/BBPACHECO/O_Ultimo_Dia_Da_Democracia/raw/refs/heads/main/downloads/o-ultimo-dia-v0.3.1.apk)
 
 Abra o link no celular, baixe o arquivo e toque nele para instalar. Se o Android solicitar, autorize a instalação para o aplicativo usado para abrir o APK. Compatível com Android 7.0 ou superior, ARMv7/ARM64 e OpenGL ES 3.0. O jogo funciona offline depois de instalado. A assinatura é de desenvolvimento.
 
-O APK e seu checksum SHA-256 ficam na pasta [`downloads/`](downloads/). Use o celular **na horizontal**. A versão 0.3.0 usa a mesma assinatura e aumenta o código de versão, permitindo atualizar a 0.2.0 sem desinstalar. Os saves anteriores são migrados automaticamente. A fase 1 da versão 0.2.0 foi testada e aprovada pelo usuário no celular; combate, diálogos e desempenho desta atualização ainda precisam desse teste em aparelho físico.
+O APK e seu checksum SHA-256 ficam na pasta [`downloads/`](downloads/). Use o celular **na horizontal**. A versão 0.3.1 usa a mesma assinatura e aumenta o código de versão, permitindo atualizar a 0.3.0 sem desinstalar. O progresso anterior é preservado. Para encontrar todos os zumbis ativos, inicie uma nova missão; inimigos já derrotados no save continuam derrotados. A fase 1 da versão 0.2.0 foi testada e aprovada pelo usuário no celular; os novos recursos ainda precisam desse teste em aparelho físico.
 
 | Ação | Celular | Computador |
 | --- | --- | --- |
@@ -27,13 +29,13 @@ O APK e seu checksum SHA-256 ficam na pasta [`downloads/`](downloads/). Use o ce
 | Correr | Segurar **CORRER** com outro dedo | Shift |
 | Recolher / transmitir | Aproximar e tocar no botão de ação | E |
 | Conversar | Aproximar de Lia, Inês ou Tomás e tocar **Falar** | E; E também avança a conversa |
-| Atacar | Tocar **ATACAR**, de frente e perto do guarda | Espaço |
+| Atacar | Tocar **ATACAR**, de frente e perto do zumbi | Espaço |
 | Alternar câmera | **VISÃO** | F |
 | Pausar | **Pausa** ou Voltar do Android | Esc |
 
-Joystick, câmera e botões aceitam dedos independentes. Recue quando um guarda preparar o golpe e ataque para interrompê-lo. Cada golpe tem intervalo; inimigos fora de alcance, atrás do personagem ou de paredes não são atingidos.
+Joystick, câmera e botões aceitam dedos independentes. Recue quando um zumbi preparar o ataque e golpeie para interrompê-lo. Cada golpe tem intervalo; inimigos fora de alcance, atrás do personagem ou de paredes não são atingidos.
 
-Ao pausar, conversar ou trocar de aplicativo, o relógio e as patrulhas param. **Continuar missão** retoma posição, provas, prazo, alerta, saúde, conversas concluídas e guardas derrotados. Concluir a primeira conversa com Lia recupera até 20 de saúde; Tomás reduz o alerta. Esses benefícios acontecem uma única vez por missão.
+Ao pausar, conversar ou trocar de aplicativo, o relógio e os inimigos param. **Continuar missão** retoma posição, provas, prazo, alerta, saúde, conversas concluídas e inimigos derrotados. Concluir a primeira conversa com Lia recupera até 20 de saúde; Tomás reduz o alerta. Esses benefícios acontecem uma única vez por missão.
 
 ![Conversa com Lia dentro do cenário 3D](docs/dialogo.png)
 
@@ -81,7 +83,7 @@ O preset deixa a execução automática por USB no editor desativada (`runnable=
 - `scripts/city_world.gd`: cenário original, colisões e patrulhas.
 - `scripts/mission_state.gd`: regras e salvamento validado.
 - `scripts/radar_3d.gd`: mapa do jogador, objetivos e patrulhas.
-- `scripts/enemy_guard.gd`: percepção, perseguição, ataques, recuo e derrota dos guardas.
+- `scripts/enemy_guard.gd`: zumbis, perseguição, ataques, recuo e derrota; o nome histórico do arquivo foi mantido para compatibilidade.
 - `scripts/citizen_npc.gd`, `scripts/dialogue_book.gd` e `data/dialogues.json`: moradores e conversas contextuais.
 - `tests/test_3d.gd`: regras, persistência, física, multitoque, pausa e missão completa.
 - `tests/test_action.gd`: combate, paredes, saúde, diálogo, câmera e migração de saves.
@@ -91,4 +93,4 @@ O salvamento 3D fica em `user://mission_3d_v2.json`, no armazenamento privado do
 
 A imagem acima é uma captura real do engine usando OpenGL por software, sem navegador. `tools/capture_screens.gd` pode repetir a inspeção em uma sessão gráfica. As fontes DejaVu são acompanhadas de sua licença, incluída no APK.
 
-Os arquivos da versão 0.1.0 de alternativas permanecem como código legado, sem participar da experiência principal. A fase 1 de exploração da versão 0.2.0 foi preservada e ampliada na 0.3.0.
+Os arquivos da versão 0.1.0 de alternativas permanecem como código legado, sem participar da experiência principal. A fase 1 da versão 0.2.0 e os diálogos/combate da 0.3.0 foram preservados; a 0.3.1 substitui os guardas por zumbis conforme a preferência do usuário.

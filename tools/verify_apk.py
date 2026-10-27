@@ -45,7 +45,7 @@ for index, line in enumerate(lines):
                 require(target is not None and target[1] == 'com.godot.game.GodotApp', 'alias aponta para atividade incorreta')
             break
 require(launcher is not None, 'sem atividade inicial exportada com MAIN/LAUNCHER')
-require("versionName='0.3.0'" in badging and "versionCode='3'" in badging, 'versão inesperada')
+require("versionName='0.3.1'" in badging and "versionCode='4'" in badging, 'versão inesperada')
 require('android.permission.INTERNET' not in permissions, 'permissão de internet presente')
 require('android.permission.ACCESS_NETWORK_STATE' not in permissions, 'permissão de rede presente')
 with zipfile.ZipFile(apk) as z:

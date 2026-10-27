@@ -3,8 +3,8 @@ config_version=5
 
 [application]
 config/name="O Último Dia da Democracia"
-config/description="Explore Aurora, converse com os moradores e enfrente as patrulhas para transmitir a verdade."
-config/version="0.3.0"
+config/description="Explore Aurora, converse com os sobreviventes e enfrente os zumbis para transmitir a verdade."
+config/version="0.3.1"
 run/main_scene="res://scenes/third_person.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://assets/icon.svg"

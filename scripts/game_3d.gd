@@ -206,7 +206,7 @@ func start_mission() -> void:
 	_set_phase("playing")
 	_save_progress()
 	_update_hud()
-	_message("Converse com Lia junto à praça. Fuja dos guardas ou use ATACAR para abrir caminho.", 7.0)
+	_message("Converse com Lia junto à praça. Evite os zumbis ou use ATACAR para abrir caminho.", 7.0)
 
 
 func continue_mission() -> void:
@@ -354,7 +354,7 @@ func _on_player_struck(damage: float, guard: Node3D) -> void:
 	if mission.take_damage(damage):
 		player.play_hurt()
 		_update_hud()
-		_message("Você foi atingido. Afaste-se quando o guarda preparar o próximo golpe.", 3.0)
+		_message("O zumbi atingiu você. Recue quando ele preparar o próximo ataque.", 3.0)
 		if not mission.outcome.is_empty():
 			_show_result()
 
@@ -363,7 +363,7 @@ func _on_guard_defeated(guard: Node3D) -> void:
 	if guard.guard_id not in mission.defeated_ids:
 		mission.defeated_ids.append(guard.guard_id)
 		_save_progress()
-		_message("Guarda fora de combate. O caminho está livre.", 3.0)
+		_message("Zumbi derrubado. O caminho está livre.", 3.0)
 
 
 func begin_dialogue(npc: Node3D) -> void:
@@ -430,7 +430,7 @@ func _update_hud() -> void:
 	clock.text = "%02d:%02d" % [seconds / 60, seconds % 60]
 	counter.text = "PROVAS  %d / 3" % mission.collected.size()
 	alert_bar.value = mission.alert
-	health_label.text = "VIDA  %03d / 100   ·   VIGIAS  %d / 3" % [ceili(mission.health), mission.defeated_ids.size()]
+	health_label.text = "VIDA  %03d / 100   ·   ZUMBIS  %d / 3" % [ceili(mission.health), mission.defeated_ids.size()]
 	var best: float = INF
 	_nearby = {}
 	for point: Dictionary in world.evidence_points:
@@ -476,7 +476,7 @@ func _show_result() -> void:
 		result_body.text = "As patrulhas localizaram seu sinal. Na próxima tentativa, mantenha distância dos drones e use os edifícios como cobertura."
 	elif mission.outcome == "injured":
 		result_title.text = "Você foi\ninterceptado."
-		result_body.text = "Os guardas cercaram você antes da transmissão. Evite ficar parado durante os ataques: recue quando prepararem o golpe e use ATACAR para abrir uma saída."
+		result_body.text = "Os zumbis cercaram você antes da transmissão. Evite ficar parado: recue quando prepararem o ataque e use ATACAR para abrir uma saída."
 	else:
 		result_title.text = "Meia-noite\nchegou."
 		result_body.text = "O prazo acabou antes da transmissão. As provas estão nos feixes dourados; recolha as três e leve-as ao terminal da torre."
@@ -654,7 +654,7 @@ func _build_interface() -> void:
 	alert_bar.add_theme_stylebox_override("fill", fill)
 	alert_bar.size = Vector2(300, 6)
 	hud.add_child(alert_bar)
-	health_label = _label("VIDA  100 / 100   ·   VIGIAS  0 / 3", 17, Color("b9d8b0"))
+	health_label = _label("VIDA  100 / 100   ·   ZUMBIS  0 / 3", 17, Color("b9d8b0"))
 	health_label.name = "HealthLabel"
 	health_label.position = Vector2(30, 224)
 	health_label.size = Vector2(390, 30)
@@ -689,7 +689,7 @@ func _build_interface() -> void:
 	home.add_child(_label("AURORA · 23:55", 17, GOLD))
 	home.add_child(_headline("O ÚLTIMO DIA\nDA DEMOCRACIA"))
 	home.add_child(_label("Atravesse a cidade.\nFaça a verdade chegar ao ar.", 24))
-	home.add_child(_label("Converse com os moradores, enfrente ou evite os guardas e reúna três provas para transmitir antes da meia-noite.", 20, Color("b1c4c5")))
+	home.add_child(_label("Converse com os sobreviventes, enfrente ou evite os zumbis e reúna três provas para transmitir antes da meia-noite.", 20, Color("b1c4c5")))
 	continue_button = _button("Continuar missão", continue_mission, true)
 	continue_button.name = "ContinueMissionButton"
 	continue_button.visible = false

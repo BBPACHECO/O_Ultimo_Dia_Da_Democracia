@@ -1,5 +1,5 @@
 extends CharacterBody3D
-## Guarda humano com percepção, perseguição, ataque anunciado e defesa interrompível.
+## Zumbi de camisa verde e amarela. Os IDs antigos preservam os saves anteriores.
 signal struck_player(damage: float)
 signal defeated(guard: Node3D)
 
@@ -9,6 +9,8 @@ const WINDUP_TIME: float = 0.55
 const ATTACK_COOLDOWN: float = 1.3
 const DETECT_DISTANCE: float = 11.0
 const ATTACK_RANGE: float = 1.9
+const SHIRT_GREEN: Color = Color("2f8f3b")
+const SHIRT_YELLOW: Color = Color("e6c82d")
 
 var target: CharacterBody3D
 var guard_id: String = "vigia"
@@ -36,6 +38,7 @@ var _left_arm: Node3D
 var _right_arm: Node3D
 var _left_leg: Node3D
 var _right_leg: Node3D
+var _head: Node3D
 var _status_label: Label3D
 var _ring: MeshInstance3D
 var _ring_material: StandardMaterial3D
@@ -267,41 +270,74 @@ func _limb(at: Vector3, length: float, width: float, material: Material) -> Node
 
 func _build_visual() -> void:
 	visual = Node3D.new()
-	visual.name = "GuardHuman"
+	visual.name = "Zombie"
 	add_child(visual)
-	var uniform: Material = _material(Color("3f4841"))
-	var dark: Material = _material(Color("222c29"))
-	var boots: Material = _material(Color("1b2220"))
-	var skin: Material = _material(Color("ae866b") if absi(guard_id.hash()) % 2 == 0 else Color("8e684f"))
-	var badge: Material = _material(Color("b8a47a"))
-	_box(visual, Vector3(0.56, 0.64, 0.34), Vector3(0, 1.12, 0), uniform)
-	_box(visual, Vector3(0.58, 0.12, 0.37), Vector3(0, 0.84, 0), dark)
-	_box(visual, Vector3(0.13, 0.13, 0.025), Vector3(-0.15, 1.27, -0.185), badge)
-	_box(visual, Vector3(0.09, 0.26, 0.045), Vector3(0.16, 1.22, -0.2), dark)
+	var green: Material = _material(SHIRT_GREEN)
+	var yellow: Material = _material(SHIRT_YELLOW)
+	var green_faded: Material = _material(Color("507c3f"))
+	var trousers: Material = _material(Color("343b39"))
+	var shoes: Material = _material(Color("252b29"))
+	var skin: Material = _material(Color("90a48a") if absi(guard_id.hash()) % 2 == 0 else Color("a1a68b"))
+	var skin_shadow: Material = _material(Color("60715e"))
+	var hair: Material = _material(Color("393c32"))
+	var eye: Material = _material(Color("dbd29b"))
+	# As faixas envolvem a camisa: verde e amarelo continuam legíveis pelas costas.
+	var shirt: MeshInstance3D = _box(visual, Vector3(0.57, 0.64, 0.35), Vector3(0, 1.12, 0), green)
+	shirt.name = "ShirtGreen"
+	var stripe: MeshInstance3D = _box(visual, Vector3(0.585, 0.20, 0.367), Vector3(0, 1.15, 0), yellow)
+	stripe.name = "ShirtYellowBand"
+	var shoulder: MeshInstance3D = _box(visual, Vector3(0.59, 0.075, 0.37), Vector3(0, 1.40, 0), yellow)
+	shoulder.name = "ShirtYellowShoulder"
+	# Bainha irregular, manchas e rasgos são geométricos, sem sangue ou emblemas.
+	for index in range(4):
+		var x: float = -0.23 + float(index) * 0.15
+		var drop: float = 0.08 if (index + absi(guard_id.hash())) % 2 == 0 else 0.03
+		var hem: MeshInstance3D = _box(visual, Vector3(0.13, 0.09 + drop, 0.35), Vector3(x, 0.81 - drop * 0.35, 0), green)
+		hem.rotation.z = -0.08 if index % 2 == 0 else 0.06
+	_box(visual, Vector3(0.12, 0.11, 0.015), Vector3(-0.12, 0.96, -0.182), green_faded)
+	_box(visual, Vector3(0.15, 0.10, 0.016), Vector3(0.14, 1.30, 0.183), green_faded)
+	_box(visual, Vector3(0.08, 0.10, 0.018), Vector3(0.17, 0.91, 0.185), skin_shadow)
 	_box(visual, Vector3(0.13, 0.16, 0.14), Vector3(0, 1.49, 0), skin)
+	_head = Node3D.new()
+	_head.position = Vector3(0, 1.55, -0.045)
+	_head.rotation = Vector3(0.16, 0, -0.15)
+	visual.add_child(_head)
 	var head: MeshInstance3D = MeshInstance3D.new()
 	var head_mesh: SphereMesh = SphereMesh.new()
-	head_mesh.radius = 0.18
-	head_mesh.height = 0.34
+	head_mesh.radius = 0.19
+	head_mesh.height = 0.37
 	head_mesh.radial_segments = 12
 	head_mesh.rings = 6
 	head.mesh = head_mesh
 	head.material_override = skin
-	head.position = Vector3(0, 1.69, 0)
-	visual.add_child(head)
-	_box(visual, Vector3(0.37, 0.12, 0.35), Vector3(0, 1.84, 0), dark)
-	_box(visual, Vector3(0.35, 0.045, 0.19), Vector3(0, 1.79, -0.22), dark)
-	_box(visual, Vector3(0.04, 0.025, 0.025), Vector3(-0.065, 1.71, -0.173), dark)
-	_box(visual, Vector3(0.04, 0.025, 0.025), Vector3(0.065, 1.71, -0.173), dark)
-	_left_leg = _limb(Vector3(-0.16, 0.80, 0), 0.68, 0.18, uniform)
-	_right_leg = _limb(Vector3(0.16, 0.80, 0), 0.68, 0.18, uniform)
-	_box(_left_leg, Vector3(0.20, 0.14, 0.33), Vector3(0, -0.68, -0.06), boots)
-	_box(_right_leg, Vector3(0.20, 0.14, 0.33), Vector3(0, -0.68, -0.06), boots)
-	_left_arm = _limb(Vector3(-0.35, 1.39, 0), 0.57, 0.15, uniform)
-	_right_arm = _limb(Vector3(0.35, 1.39, 0), 0.57, 0.15, uniform)
-	_box(_left_arm, Vector3(0.14, 0.17, 0.13), Vector3(0, -0.60, 0), skin)
-	_box(_right_arm, Vector3(0.14, 0.17, 0.13), Vector3(0, -0.60, 0), skin)
-	_box(_right_arm, Vector3(0.045, 0.46, 0.045), Vector3(0, -0.82, 0), boots)
+	head.position = Vector3(0, 0.15, 0)
+	_head.add_child(head)
+	_box(_head, Vector3(0.25, 0.07, 0.30), Vector3(-0.025, 0.31, 0.025), hair)
+	_box(_head, Vector3(0.10, 0.08, 0.11), Vector3(0.10, 0.30, 0.065), hair)
+	for side in [-1.0, 1.0]:
+		_box(_head, Vector3(0.075, 0.07, 0.025), Vector3(side * 0.068, 0.17, -0.177), skin_shadow)
+		_box(_head, Vector3(0.025, 0.032, 0.016), Vector3(side * 0.068, 0.17, -0.194), eye)
+	_box(_head, Vector3(0.11, 0.045, 0.02), Vector3(0, 0.065, -0.18), skin_shadow)
+	_left_leg = _limb(Vector3(-0.16, 0.80, 0), 0.68, 0.18, trousers)
+	_right_leg = _limb(Vector3(0.16, 0.80, 0), 0.68, 0.18, trousers)
+	_box(_left_leg, Vector3(0.19, 0.13, 0.018), Vector3(0, -0.34, -0.098), skin_shadow)
+	_box(_left_leg, Vector3(0.20, 0.13, 0.32), Vector3(0, -0.68, -0.06), shoes)
+	_box(_right_leg, Vector3(0.20, 0.13, 0.30), Vector3(0, -0.68, -0.05), shoes)
+	_left_arm = Node3D.new()
+	_left_arm.position = Vector3(-0.35, 1.39, 0)
+	visual.add_child(_left_arm)
+	_right_arm = Node3D.new()
+	_right_arm.position = Vector3(0.35, 1.39, 0)
+	visual.add_child(_right_arm)
+	_box(_left_arm, Vector3(0.18, 0.24, 0.20), Vector3(0, -0.12, 0), yellow)
+	_box(_right_arm, Vector3(0.18, 0.23, 0.20), Vector3(0, -0.115, 0), green)
+	_box(_right_arm, Vector3(0.19, 0.07, 0.21), Vector3(0, -0.19, 0), yellow)
+	_box(_left_arm, Vector3(0.15, 0.39, 0.15), Vector3(0, -0.42, 0), skin)
+	_box(_right_arm, Vector3(0.15, 0.39, 0.15), Vector3(0, -0.42, 0), skin)
+	for arm: Node3D in [_left_arm, _right_arm]:
+		_box(arm, Vector3(0.16, 0.17, 0.12), Vector3(0, -0.67, -0.025), skin)
+		for finger in range(3):
+			_box(arm, Vector3(0.025, 0.11, 0.03), Vector3(-0.05 + finger * 0.05, -0.79, -0.035), skin_shadow)
 	_ring = MeshInstance3D.new()
 	var ring_mesh: TorusMesh = TorusMesh.new()
 	ring_mesh.inner_radius = 0.43
@@ -317,8 +353,8 @@ func _build_visual() -> void:
 	_status_label = Label3D.new()
 	_status_label.position.y = 2.25
 	_status_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_status_label.font_size = 23
-	_status_label.pixel_size = 0.009
+	_status_label.font_size = 25
+	_status_label.pixel_size = 0.010
 	_status_label.outline_size = 5
 	_status_label.outline_modulate = Color("172822")
 	add_child(_status_label)
@@ -328,31 +364,41 @@ func _update_visual(delta: float) -> void:
 	if not is_instance_valid(visual) or _status_label == null:
 		return
 	if defeated_flag:
-		_status_label.text = "FORA DE COMBATE"
+		_status_label.text = "IMOBILIZADO"
 		_status_label.modulate = Color("a4aa99")
 		_ring.visible = false
 		return
 	var speed: float = Vector2(velocity.x, velocity.z).length()
-	_walk_cycle += delta * (10.0 if state == "chase" else 7.0)
-	var swing: float = sin(_walk_cycle) * minf(speed / 4.0, 0.55)
+	_walk_cycle += delta * (7.0 if state == "chase" else 4.2)
+	var swing: float = sin(_walk_cycle) * minf(speed / 5.0, 0.38)
 	_left_leg.rotation.x = swing
-	_right_leg.rotation.x = -swing
-	_left_arm.rotation.x = -swing * 0.6
-	_right_arm.rotation.x = swing * 0.6
+	_right_leg.rotation.x = -sin(_walk_cycle + 0.4) * minf(speed / 5.0, 0.30)
+	visual.rotation.x = -0.10 - absf(sin(_walk_cycle * 0.5)) * 0.035
+	visual.rotation.z = sin(_walk_cycle * 0.65) * 0.035
+	visual.position.y = absf(sin(_walk_cycle)) * 0.018
+	_head.rotation.z = -0.15 + sin(_walk_cycle * 0.8) * 0.045
+	var reach: float = 1.15 if state in ["chase", "windup"] else 0.52
+	_left_arm.rotation.x = reach + swing * 0.3
+	_right_arm.rotation.x = reach - swing * 0.25
+	_left_arm.rotation.z = -0.12
+	_right_arm.rotation.z = 0.16
 	var color: Color = Color("bdad7d")
-	var caption: String = "PATRULHA"
+	var caption: String = "ZUMBI"
 	if state == "windup":
 		color = Color("ed765b")
-		caption = "AFASTE-SE!"
-		_right_arm.rotation.x = -1.7 + (WINDUP_TIME - windup_remaining) * 1.2
+		caption = "VAI ATACAR!"
+		_right_arm.rotation.x = 0.35 + (WINDUP_TIME - windup_remaining) * 2.5
+		_left_arm.rotation.x = 1.45
 	elif state == "chase":
 		color = Color("e4a46b")
-		caption = "EM PERSEGUIÇÃO"
+		caption = "PERSEGUINDO"
 	elif state == "search":
-		caption = "PROCURANDO"
+		caption = "VAGANDO"
 	elif state == "stunned":
 		color = Color("f1d595")
 		caption = "ATORDOADO"
+		_left_arm.rotation.x = 0.25
+		_right_arm.rotation.x = 0.40
 	_status_label.text = "%s · %d" % [caption, ceili(health)]
 	_status_label.modulate = color
 	_ring_material.albedo_color = color

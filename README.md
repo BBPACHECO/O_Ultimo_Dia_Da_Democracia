@@ -1,24 +1,38 @@
 # O Último Dia da Democracia
 
-Jogo narrativo **nativo para Android**, em português, feito com Godot 4.6.3 e GDScript. Funciona offline, sem navegador, WebView, conta, anúncios ou serviços externos.
+**Protótipo 3D em terceira pessoa para Android**, em português, feito com Godot 4.6.3 e GDScript. Você controla um repórter nas ruas de Aurora, com movimentação livre e câmera atrás do personagem. Funciona offline, sem navegador ou WebView.
 
-## A primeira versão
+## A missão em terceira pessoa
 
-Na cidade fictícia de Aurora, você assume o último plantão de uma redação independente. Oito decisões, da tarde à meia-noite, mudam a voz pública, as provas reunidas e o risco para a equipe. Suas escolhas levam a diferentes desfechos. O progresso é salvo automaticamente no aparelho; é possível sair e continuar depois.
+Faltam cinco minutos para a meia-noite. Explore Aurora, reúna três provas e leve o dossiê ao terminal da torre de transmissão. Os documentos estão no Arquivo Municipal, na estação de rádio e na última redação. Drones patrulham a região: mantenha distância ou use os edifícios como cobertura para reduzir o alerta.
+
+O protótipo inclui personagem com animação de caminhada e corrida, colisões, câmera orbital com prevenção de atravessamento de paredes, mapa, objetivos, patrulhas, prazo, pausa e salvamento local da posição e do progresso. É uma pequena área de exploração jogável, ainda em desenvolvimento.
+
+![Captura real do protótipo em terceira pessoa](docs/terceira-pessoa.png)
 
 É um protótipo jogável original. O cenário e os personagens são fictícios.
 
 ## Baixar no celular
 
-[Baixar APK de teste v0.1.0 para Android](https://github.com/BBPACHECO/O_Ultimo_Dia_Da_Democracia/raw/refs/heads/main/downloads/o-ultimo-dia-v0.1.0.apk)
+[Baixar APK v0.2.0 — terceira pessoa](https://github.com/BBPACHECO/O_Ultimo_Dia_Da_Democracia/raw/refs/heads/main/downloads/o-ultimo-dia-v0.2.0.apk)
 
 Abra o link no celular, baixe o arquivo e toque nele para instalar. Se o Android solicitar, autorize a instalação para o aplicativo usado para abrir o APK. Compatível com Android 7.0 ou superior, ARMv7/ARM64 e OpenGL ES 3.0. O jogo funciona offline depois de instalado. A assinatura é de desenvolvimento.
 
-O APK e seu checksum SHA-256 ficam na pasta [`downloads/`](downloads/). A instalação e o uso em um aparelho físico ainda precisam ser verificados.
+O APK e seu checksum SHA-256 ficam na pasta [`downloads/`](downloads/). Use o celular **na horizontal**. A versão 0.2.0 usa a mesma assinatura e aumenta o código de versão, permitindo atualizar a 0.1.0 sem desinstalar. A instalação e o desempenho em um aparelho físico ainda precisam ser verificados.
+
+| Ação | Celular | Computador |
+| --- | --- | --- |
+| Andar | Joystick à esquerda | WASD ou setas |
+| Olhar | Arrastar à direita | Segurar mouse direito e mover; Q/R também giram |
+| Correr | Segurar **CORRER** com outro dedo | Shift |
+| Recolher / transmitir | Aproximar e tocar no botão de ação | E |
+| Pausar | **Pausa** ou Voltar do Android | Esc |
+
+Joystick, câmera e botões aceitam dedos independentes. Ao pausar ou trocar de aplicativo, o relógio e as patrulhas param. **Continuar missão** retoma posição, provas, prazo e alerta.
 
 ## Desenvolver
 
-Abra `project.godot` no **Godot 4.6.3 estável**, edição padrão (não precisa de .NET), e pressione F6 na cena principal ou F5 no projeto. A janela de desenvolvimento simula a tela vertical do celular. O jogo instalado usa a interface e o renderizador nativos do engine.
+Abra `project.godot` no **Godot 4.6.3 estável**, edição padrão (não precisa de .NET), e pressione F5. A cena inicial é `scenes/third_person.tscn`, em orientação horizontal. O jogo instalado usa a interface e o renderizador nativos do engine.
 
 No ambiente de nuvem Linux, o Godot e o Java 21 já estão disponíveis:
 
@@ -52,11 +66,17 @@ O preset deixa a execução automática por USB no editor desativada (`runnable=
 
 ## Organização
 
-- `data/story.json`: capítulos, textos e consequências.
-- `scripts/story_game.gd`: regras, finais e salvamento validado.
-- `scripts/main.gd` e `scenes/main.tscn`: interface do jogo para toque.
-- `assets/`: arte vetorial original.
-- `tests/`: testes do motor e do fluxo da interface, executados pelo próprio Godot.
+- `scripts/game_3d.gd`: missão, interface e pausa.
+- `scripts/player_3d.gd`: personagem físico, animação e câmera.
+- `scripts/touch_controls.gd`: joystick, câmera e ações com multitoque.
+- `scripts/city_world.gd`: cenário original, colisões e patrulhas.
+- `scripts/mission_state.gd`: regras e salvamento validado.
+- `scripts/radar_3d.gd`: mapa do jogador, objetivos e patrulhas.
+- `tests/test_3d.gd`: regras, persistência, física, multitoque, pausa e missão completa.
 - `tools/`: instalação reproduzível, testes, exportação e verificação do APK.
 
-O salvamento fica em `user://game_save.json`, no armazenamento privado do aplicativo. Os testes usam arquivos separados do progresso do jogador. `builds/` e `.godot/` são saídas locais ignoradas pelo Git.
+O salvamento 3D fica em `user://mission_3d_v2.json`, no armazenamento privado do aplicativo. Os testes usam arquivos separados do progresso do jogador. `builds/` e `.godot/` são saídas locais ignoradas pelo Git.
+
+A imagem acima é uma captura real do engine usando OpenGL por software, sem navegador. `tools/capture_screens.gd` pode repetir a inspeção em uma sessão gráfica. As fontes DejaVu são acompanhadas de sua licença, incluída no APK.
+
+Os arquivos da versão 0.1.0 de alternativas permanecem como código legado, mas não são a experiência principal da versão 0.2.0.

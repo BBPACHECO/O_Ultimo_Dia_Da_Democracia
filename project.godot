@@ -3,20 +3,20 @@ config_version=5
 
 [application]
 config/name="O Último Dia da Democracia"
-config/description="Um jogo narrativo de escolhas, feito para jogar offline no celular."
-config/version="0.1.0"
-run/main_scene="res://scenes/main.tscn"
+config/description="Explore Aurora em terceira pessoa, reúna provas e transmita a verdade antes da meia-noite."
+config/version="0.2.0"
+run/main_scene="res://scenes/third_person.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://assets/icon.svg"
 config/auto_accept_quit=false
 
 [display]
-window/size/viewport_width=540
-window/size/viewport_height=960
-window/size/window_width_override=432
-window/size/window_height_override=768
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/window_width_override=1152
+window/size/window_height_override=648
 window/stretch/mode="canvas_items"
-window/handheld/orientation=1
+window/handheld/orientation=0
 
 [rendering]
 renderer/rendering_method="gl_compatibility"
@@ -27,7 +27,7 @@ environment/defaults/default_clear_color=Color(0.039, 0.071, 0.094, 1)
 
 [input_devices]
 pointing/emulate_mouse_from_touch=true
-pointing/emulate_touch_from_mouse=true
+pointing/emulate_touch_from_mouse=false
 
 [audio]
 driver/enable_input=false

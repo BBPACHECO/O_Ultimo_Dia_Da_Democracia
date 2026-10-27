@@ -45,17 +45,19 @@ for index, line in enumerate(lines):
                 require(target is not None and target[1] == 'com.godot.game.GodotApp', 'alias aponta para atividade incorreta')
             break
 require(launcher is not None, 'sem atividade inicial exportada com MAIN/LAUNCHER')
-require("versionName='0.1.0'" in badging, 'versão inesperada')
+require("versionName='0.2.0'" in badging and "versionCode='2'" in badging, 'versão inesperada')
 require('android.permission.INTERNET' not in permissions, 'permissão de internet presente')
 require('android.permission.ACCESS_NETWORK_STATE' not in permissions, 'permissão de rede presente')
 with zipfile.ZipFile(apk) as z:
     names = z.namelist()
     require(z.testzip() is None, 'CRC incorreto')
     require('classes.dex' in names and 'AndroidManifest.xml' in names, 'não é aplicativo Android')
-    require('assets/project.binary' in names and 'assets/scenes/main.tscn.remap' in names, 'cena inicial ausente')
-    remap = z.read('assets/scenes/main.tscn.remap').decode('utf-8')
+    require('assets/project.binary' in names and 'assets/scenes/third_person.tscn.remap' in names, 'cena 3D inicial ausente')
+    remap = z.read('assets/scenes/third_person.tscn.remap').decode('utf-8')
     scene = re.search(r'path="res://([^"]+)"', remap)
     require(scene is not None and 'assets/' + scene[1] in names, 'cena compilada ausente')
+    for script in ['game_3d', 'city_world', 'player_3d', 'touch_controls', 'mission_state', 'radar_3d']:
+        require('assets/scripts/' + script + '.gdc' in names, 'módulo 3D ausente: ' + script)
     require('assets/data/story.json' in names, 'narrativa ausente')
     require('assets/assets/fonts/LICENSE-DejaVu.txt' in names, 'licença das fontes ausente')
     story = json.loads(z.read('assets/data/story.json'))

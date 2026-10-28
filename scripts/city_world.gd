@@ -1,6 +1,7 @@
 extends Node3D
 ## Cidade original construída com geometria nativa. Sem assets ou serviços remotos.
 const Art = preload("res://scripts/art_geometry.gd")
+const House = preload("res://scripts/house_interior.gd")
 
 var spawn_point: Vector3 = Vector3(0.0, 0.0, 16.0)
 var tower_point: Vector3 = Vector3(0.0, 0.0, -24.0)
@@ -21,6 +22,7 @@ var guard_routes: Array[Dictionary] = [
 ]
 var patrols: Array[Node3D] = []
 var building_meshes: Array[MeshInstance3D] = []
+var houses: Array[Dictionary] = []
 var _built: bool = false
 var _clock: float = 0.0
 var _beacons: Dictionary = {}
@@ -162,8 +164,8 @@ func build_world() -> void:
 	_building(Vector3(-21, 0, 1), Vector3(10, 7.3, 11), Color("899080"), "ARQUIVO MUNICIPAL", true)
 	_building(Vector3(22, 0, -9), Vector3(11, 8.5, 13), Color("788879"), "RÁDIO AURORA · 104.3", false)
 	_building(Vector3(-18, 0, -20), Vector3(10, 6.5, 10), Color("a49177"), "JORNAL FAROL", true)
-	_building(Vector3(-23, 0, 20), Vector3(12, 8.5, 12), Color("74806d"), "", true)
-	_building(Vector3(23, 0, 20), Vector3(14, 10, 12), Color("918876"), "", false)
+	_house("house_left", Vector3(-22, 0, 20), Vector2(10, 9), 1.0, ["house_left_cupboard", "house_left_bedside"])
+	_house("house_right", Vector3(22, 0, 20), Vector2(11, 10), -1.0, ["house_right_kitchen", "house_right_shelf"])
 	_building(Vector3(24, 0, -26), Vector3(13, 10.5, 12), Color("798274"), "", false)
 	_building(Vector3(-29, 0, -28), Vector3(10, 15, 11), Color("6d786b"), "", true)
 	_building(Vector3(27, 0, 5), Vector3(10, 6.5, 8), Color("96917f"), "", false)
@@ -241,6 +243,23 @@ func _lighting() -> void:
 func set_graphics_quality(smooth: bool) -> void:
 	if is_instance_valid(_main_light):
 		_main_light.shadow_enabled = smooth
+
+
+func _house(id: String, center: Vector3, footprint: Vector2, side: float, loot_ids: Array) -> void:
+	var house := House.new()
+	house.position = center
+	add_child(house)
+	house.configure(id, footprint, side)
+	houses.append({"id": id, "center": center, "entrance": center + Vector3(side * footprint.x * 0.5, 0, 0), "loot_ids": loot_ids, "node": house})
+	# Caminho nivelado cruza os antigos canteiros sem degraus nem cercas.
+	var entrance_x: float = center.x + side * footprint.x * 0.5
+	var path_end: float = -9.2 if side > 0 else 9.2
+	_box(self, Vector3((entrance_x + path_end) * 0.5, 0.045, center.z), Vector3(absf(entrance_x - path_end), 0.035, 2.4), _material("sidewalk", Color("9c9b88")))
+
+
+func set_viewer_position(viewer: Vector3) -> void:
+	for data: Dictionary in houses:
+		data["node"].set_viewer_position(viewer)
 
 
 func _building(at: Vector3, dimensions: Vector3, color: Color, sign: String, faces_east: bool) -> void:
@@ -479,7 +498,7 @@ func _gardens() -> void:
 			tool.add_vertex(vertex)
 	var grass_mesh: ArrayMesh = tool.commit()
 	var patches: Array[Rect2] = [
-		Rect2(-16, 16, 6, 15), Rect2(10.5, 18, 5, 13),
+		Rect2(-16, 16, 6, 2.4), Rect2(-16, 21.6, 6, 9.4), Rect2(10.5, 21.6, 5, 9.4),
 		Rect2(-38, -35, 3, 70), Rect2(34, -35, 4, 70),
 		Rect2(-16, -6, 5, 4), Rect2(11.5, -22, 4, 6),
 	]
@@ -516,18 +535,18 @@ func _gardens() -> void:
 	# Cercas mantêm os canteiros visíveis sem fechar os acessos à praça.
 	var fence_parts: Array[Transform3D] = []
 	for x in [-16.7, 15.8]:
-		for z in range(19, 32, 2):
+		for z in range(22, 32, 2):
 			fence_parts.append(Transform3D(Basis.IDENTITY.scaled(Vector3(0.09, 1.15, 0.09)), Vector3(x, 0.58, float(z))))
 		for y in [0.28, 0.91]:
-			fence_parts.append(Transform3D(Basis.IDENTITY.scaled(Vector3(0.055, 0.055, 12)), Vector3(x, y, 25)))
-		for z in range(20, 31, 2):
+			fence_parts.append(Transform3D(Basis.IDENTITY.scaled(Vector3(0.055, 0.055, 9.4)), Vector3(x, y, 26.3)))
+		for z in range(23, 31, 2):
 			for angle in [-0.38, 0.38]:
 				fence_parts.append(Transform3D(Basis(Vector3.RIGHT, angle).scaled(Vector3(0.022, 0.022, 2.1)), Vector3(x, 0.60, float(z))))
 		var fence_body := StaticBody3D.new()
-		fence_body.position = Vector3(x, 0.55, 25)
+		fence_body.position = Vector3(x, 0.55, 26.3)
 		var fence_shape := CollisionShape3D.new()
 		var box := BoxShape3D.new()
-		box.size = Vector3(0.1, 1.1, 12)
+		box.size = Vector3(0.1, 1.1, 9.4)
 		fence_shape.shape = box
 		fence_body.add_child(fence_shape)
 		add_child(fence_body)
@@ -543,10 +562,11 @@ func _shrub_batch() -> void:
 	batch.transform_format = MultiMesh.TRANSFORM_3D
 	batch.use_colors = true
 	batch.mesh = shrub_mesh
-	batch.instance_count = 28
-	for index in range(28):
-		var x: float = -15.2 if index < 14 else 14.4
-		var z: float = 18.0 + float(index % 14) * 0.9
+	batch.instance_count = 22
+	for index in range(22):
+		var x: float = -15.2 if index < 11 else 14.4
+		var offset: int = index % 11
+		var z: float = 18.0 if offset == 0 else 21.9 + float(offset - 1) * 0.9
 		batch.set_instance_transform(index, Transform3D(Basis.IDENTITY.scaled(Vector3(1.0, 0.8 + float(index % 3) * 0.1, 1.0)), Vector3(x, 0.42, z)))
 		batch.set_instance_color(index, Color("6a7e4b") if index % 3 == 0 else Color("526b40"))
 	var material: StandardMaterial3D = Art.surface(Color.WHITE, "leaf")

@@ -8,11 +8,13 @@ const Radar = preload("res://scripts/radar_3d.gd")
 const Guard = preload("res://scripts/enemy_guard.gd")
 const Citizen = preload("res://scripts/citizen_npc.gd")
 const Dialogues = preload("res://scripts/dialogue_book.gd")
+const Scavenge = preload("res://scripts/scavenge_props.gd")
 const SERIF = preload("res://assets/fonts/DejaVuSerif-Bold.ttf")
 const INK: Color = Color("f1ead8")
 const GOLD: Color = Color("e7b974")
 var mission = Mission.new()
 var world: Node3D
+var scavenge: Node3D
 var player: CharacterBody3D
 var controls: Control
 var phase: String = "home"
@@ -38,6 +40,7 @@ var enemies: Array = []
 var citizens: Array = []
 var actors: Node3D
 var health_label: Label
+var supplies_button: Button
 var dialogue_panel: PanelContainer
 var dialogue_speaker: Label
 var dialogue_text: Label
@@ -67,6 +70,7 @@ func _ready() -> void:
 	if mission.load_game() and mission.outcome.is_empty():
 		continue_button.visible = true
 	_restore_actor_progress()
+	scavenge.restore_looted(mission.looted_ids)
 	show_home()
 
 
@@ -82,6 +86,10 @@ func _reset_world() -> void:
 	world = City.new()
 	world.name = "CityWorld"
 	add_child(world)
+	scavenge = Scavenge.new()
+	scavenge.name = "ScavengeProps"
+	world.add_child(scavenge)
+	scavenge.restore_looted(mission.looted_ids)
 	mission.evidence_ids.clear()
 	for point: Dictionary in world.evidence_points:
 		mission.evidence_ids.append(String(point["id"]))
@@ -203,6 +211,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				interact()
 		elif event.physical_keycode == KEY_SPACE and phase == "playing":
 			attack()
+		elif event.physical_keycode == KEY_H and phase == "playing":
+			use_supplies()
 		elif event.physical_keycode == KEY_F and phase == "playing":
 			player.toggle_camera_mode()
 		elif event.physical_keycode == KEY_ESCAPE:
@@ -222,6 +232,8 @@ func _physics_process(_delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	if is_instance_valid(world) and is_instance_valid(player):
+		world.set_viewer_position(player.global_position)
 	if phase != "playing" or not is_instance_valid(player):
 		return
 	_attack_cooldown = maxf(0.0, _attack_cooldown - delta)
@@ -255,7 +267,7 @@ func start_mission() -> void:
 	_set_phase("playing")
 	_save_progress()
 	_update_hud()
-	_message("Converse com Lia junto à praça. Evite os zumbis ou use ATACAR para abrir caminho.", 7.0)
+	_message("Explore as casas da praça, reviste corpos e porta-malas. Use os suprimentos em CURAR quando precisar.", 7.0)
 
 
 func continue_mission() -> void:
@@ -311,6 +323,8 @@ func _set_phase(next: String) -> void:
 	pause_panel.visible = phase == "paused"
 	result_panel.visible = phase == "result"
 	dialogue_panel.visible = phase == "dialogue"
+	if is_instance_valid(supplies_button):
+		supplies_button.disabled = phase != "playing" or mission.supplies <= 0 or mission.health >= 100.0
 
 
 func _save_progress() -> void:
@@ -320,38 +334,78 @@ func _save_progress() -> void:
 		_message("Não foi possível salvar. Mantenha o jogo aberto até terminar a missão.", 8.0)
 
 
-func interact() -> void:
-	if phase != "playing":
-		return
-	var target_npc: Node3D = _nearest_citizen()
-	if target_npc != null:
-		var npc_distance: float = _flat_distance(player.global_position, target_npc.global_position)
-		var proof_distance: float = INF
-		for point: Dictionary in world.evidence_points:
-			if point["id"] not in mission.collected:
-				proof_distance = minf(proof_distance, _flat_distance(player.global_position, point["position"]))
-		var terminal_distance: float = _flat_distance(player.global_position, world.tower_point)
-		if npc_distance < minf(proof_distance, terminal_distance) or (proof_distance > 2.8 and terminal_distance > 3.0):
-			begin_dialogue(target_npc)
-			return
+func _interaction_target() -> Dictionary:
+	# O mesmo alvo dirige o botão e a ação: nenhuma troca invisível ao tocar.
+	var target: Dictionary = {}
+	var best: float = INF
+	var npc: Node3D = _nearest_citizen()
+	if npc != null:
+		best = _flat_distance(player.global_position, npc.global_position)
+		target = {"kind": "npc", "node": npc, "label": "Falar com " + npc.display_name}
 	for point: Dictionary in world.evidence_points:
 		if point["id"] in mission.collected:
 			continue
-		if _flat_distance(player.global_position, point["position"]) <= 2.8:
+		var distance: float = _flat_distance(player.global_position, point["position"])
+		if distance <= 2.8 and distance <= best and _line_clear(player.global_position, point["position"]):
+			best = distance
+			target = {"kind": "proof", "point": point, "label": "Recolher prova"}
+	var tower_distance: float = _flat_distance(player.global_position, world.tower_point)
+	if tower_distance <= 3.0 and tower_distance < best:
+		best = tower_distance
+		target = {"kind": "tower", "label": "Transmitir" if mission.collected.size() == 3 else "Terminal"}
+	for point: Dictionary in scavenge.loot_points:
+		if point["id"] in mission.looted_ids:
+			continue
+		var distance: float = _flat_distance(player.global_position, point["position"])
+		if distance <= 2.5 and distance < best and _line_clear(player.global_position, point["position"]):
+			best = distance
+			var label: String = "Revistar corpo" if point["kind"] == "body" else ("Abrir porta-malas" if point["kind"] == "car" else "Saquear móvel")
+			target = {"kind": "loot", "point": point, "label": label}
+	return target
+
+
+func interact() -> void:
+	if phase != "playing":
+		return
+	var target: Dictionary = _interaction_target()
+	match target.get("kind", ""):
+		"npc":
+			begin_dialogue(target["node"])
+		"proof":
+			var point: Dictionary = target["point"]
 			if mission.collect(String(point["id"])):
 				world.mark_collected(String(point["id"]))
 				world.set_tower_active(mission.collected.size() == mission.evidence_ids.size())
 				_save_progress()
 				_update_hud()
 				_message(String(point["description"]), 6.0)
-			return
-	if _flat_distance(player.global_position, world.tower_point) <= 3.0:
-		if mission.transmit():
-			_show_result()
-		else:
-			_message("Ainda faltam %d provas. Procure os feixes dourados pela cidade." % (3 - mission.collected.size()))
-	else:
-		_message("Aproxime-se de uma pessoa, prova ou do terminal para interagir.")
+		"tower":
+			if mission.transmit():
+				_show_result()
+			else:
+				_message("Ainda faltam %d provas. Procure os feixes dourados pela cidade." % (3 - mission.collected.size()))
+		"loot":
+			var point: Dictionary = target["point"]
+			var before: int = mission.supplies
+			if mission.collect_loot(String(point["id"])):
+				scavenge.mark_looted(String(point["id"]))
+				_save_progress()
+				_update_hud()
+				_message("%s: +%d suprimento(s). Toque em CURAR para recuperar até 35 de vida." % [point["title"], mission.supplies - before], 5.0)
+			else:
+				_message("Mochila cheia (9/9). Use um suprimento quando estiver ferido e volte aqui.")
+		_:
+			_message("Aproxime-se de um móvel, corpo, porta-malas, pessoa ou prova para interagir.")
+
+
+func use_supplies() -> void:
+	if phase != "playing":
+		return
+	var before: float = mission.health
+	if mission.use_supplies():
+		_save_progress()
+		_update_hud()
+		_message("Curativo aplicado: +%d de vida. Restam %d suprimento(s)." % [roundi(mission.health - before), mission.supplies], 3.0)
 
 
 func _nearest_citizen() -> Node3D:
@@ -492,18 +546,12 @@ func _update_hud() -> void:
 	var tower_distance: float = _flat_distance(player.global_position, world.tower_point)
 	if mission.collected.size() == 3:
 		objective.text = "TRANSMITA AS PROVAS\nTorre de transmissão · %dm" % roundi(tower_distance)
-		controls.set_interaction_label("Transmitir", tower_distance <= 3.0)
 	elif not _nearby.is_empty():
 		objective.text = "RECOLHA AS PROVAS\n%s · %dm" % [String(_nearby["title"]), roundi(best)]
-		if tower_distance <= 3.0 and best > 2.8:
-			controls.set_interaction_label("Terminal", true)
-		else:
-			controls.set_interaction_label("Recolher prova" if best <= 2.8 else "Aproxime-se", best <= 2.8)
-	var npc: Node3D = _nearest_citizen()
-	if npc != null:
-		var npc_distance: float = _flat_distance(player.global_position, npc.global_position)
-		if (npc_distance < best or best > 2.8) and (npc_distance < tower_distance or tower_distance > 3.0):
-			controls.set_interaction_label("Falar com " + npc.display_name, true)
+	var target: Dictionary = _interaction_target()
+	controls.set_interaction_label(String(target.get("label", "Aproxime-se")), not target.is_empty())
+	supplies_button.text = "CURAR +35   ·   %d / 9" % mission.supplies
+	supplies_button.disabled = phase != "playing" or mission.supplies <= 0 or mission.health >= 100.0
 
 
 func _message(text: String, duration: float = 4.0) -> void:
@@ -708,6 +756,14 @@ func _build_interface() -> void:
 	health_label.position = Vector2(30, 224)
 	health_label.size = Vector2(390, 30)
 	hud.add_child(health_label)
+	supplies_button = _button("CURAR +35   ·   0 / 9", use_supplies)
+	supplies_button.name = "UseSuppliesButton"
+	supplies_button.position = Vector2(22, 280)
+	supplies_button.size = Vector2(280, 62)
+	supplies_button.add_theme_font_size_override("font_size", 18)
+	supplies_button.disabled = true
+	supplies_button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(supplies_button)
 	var camera_button: Button = _button("VISÃO  ◇", func() -> void: player.toggle_camera_mode())
 	camera_button.name = "CameraButton"
 	camera_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
@@ -733,12 +789,14 @@ func _build_interface() -> void:
 			player.add_camera_look(motion)
 	)
 	root_ui.add_child(controls)
+	controls.heal_button = supplies_button
+	controls.healed.connect(use_supplies)
 	home_panel = _overlay(root_ui, "HomeScreen")
 	var home: VBoxContainer = _column(home_panel)
 	home.add_child(_label("AURORA · 23:55", 17, GOLD))
 	home.add_child(_headline("O ÚLTIMO DIA\nDA DEMOCRACIA"))
 	home.add_child(_label("Atravesse a cidade.\nFaça a verdade chegar ao ar.", 24))
-	home.add_child(_label("Converse com os sobreviventes, enfrente ou evite os zumbis e reúna três provas para transmitir antes da meia-noite.", 20, Color("b1c4c5")))
+	home.add_child(_label("Explore casas, reviste corpos e porta-malas para encontrar curativos. Converse com sobreviventes e reúna três provas antes da meia-noite.", 20, Color("b1c4c5")))
 	continue_button = _button("Continuar missão", continue_mission, true)
 	continue_button.name = "ContinueMissionButton"
 	continue_button.visible = false
@@ -747,7 +805,7 @@ func _build_interface() -> void:
 	start_button.name = "StartMissionButton"
 	home.add_child(start_button)
 	home.add_child(_quality_button())
-	home.add_child(_label("TOQUE  Joystick · Arraste para olhar · ATACAR · VISÃO\nPC  WASD · Shift · E conversa/ação · Espaço ataque · F câmera", 15, Color("a7bcbd")))
+	home.add_child(_label("TOQUE  Joystick · Arraste para olhar · ATACAR · VISÃO\nPC  WASD · Shift · E conversa/ação · Espaço ataque · H curar · F câmera", 15, Color("a7bcbd")))
 	home.add_child(_label("Uma história fictícia. Jogue offline, no seu celular.", 15, GOLD))
 	pause_panel = _overlay(root_ui, "PauseScreen")
 	var pause: VBoxContainer = _column(pause_panel)

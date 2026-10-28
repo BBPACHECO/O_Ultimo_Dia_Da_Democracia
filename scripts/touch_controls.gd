@@ -5,6 +5,7 @@ signal interacted
 signal look_dragged(delta: Vector2)
 signal attacked
 signal camera_toggled
+signal healed
 
 const NAVY := Color("102a35")
 const GOLD := Color("e0b777")
@@ -21,6 +22,9 @@ var enabled: bool = true:
 		if not value:
 			reset_controls()
 
+# Botão do HUD, tratado com o mesmo multitoque das ações de combate.
+var heal_button: Button
+
 var interact_button: Button
 var sprint_button: Button
 var attack_button: Button
@@ -32,6 +36,7 @@ var _look_finger: int = -1
 var _sprint_fingers: Dictionary = {}
 var _interaction_fingers: Dictionary = {}
 var _attack_fingers: Dictionary = {}
+var _heal_fingers: Dictionary = {}
 var _mouse_joystick: bool = false
 var _mouse_sprint: bool = false
 var _mouse_interaction: bool = false
@@ -165,6 +170,7 @@ func reset_controls() -> void:
 	_sprint_fingers.clear()
 	_interaction_fingers.clear()
 	_attack_fingers.clear()
+	_heal_fingers.clear()
 	_mouse_joystick = false
 	_mouse_sprint = false
 	_mouse_interaction = false
@@ -200,7 +206,7 @@ func _input(event: InputEvent) -> void:
 		elif local.index == _look_finger:
 			look_dragged.emit(local.relative)
 			handled = true
-		elif _sprint_fingers.has(local.index) or _interaction_fingers.has(local.index) or _attack_fingers.has(local.index):
+		elif _sprint_fingers.has(local.index) or _interaction_fingers.has(local.index) or _attack_fingers.has(local.index) or _heal_fingers.has(local.index):
 			handled = true
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		var local := make_input_local(event) as InputEventMouseButton
@@ -215,7 +221,12 @@ func _input(event: InputEvent) -> void:
 
 func _touch_pressed(index: int, at: Vector2) -> bool:
 	# A duplicate press cannot reassign an existing finger or trigger two attacks.
-	if index == _joystick_finger or index == _look_finger or _sprint_fingers.has(index) or _interaction_fingers.has(index) or _attack_fingers.has(index):
+	if index == _joystick_finger or index == _look_finger or _sprint_fingers.has(index) or _interaction_fingers.has(index) or _attack_fingers.has(index) or _heal_fingers.has(index):
+		return true
+	if _over_heal_button(at):
+		_heal_fingers[index] = true
+		if not heal_button.disabled:
+			healed.emit()
 		return true
 	if attack_button.get_rect().has_point(at):
 		_attack_fingers[index] = true
@@ -261,12 +272,19 @@ func _touch_released(index: int) -> bool:
 	if _attack_fingers.has(index):
 		_attack_fingers.erase(index)
 		handled = true
+	if _heal_fingers.has(index):
+		_heal_fingers.erase(index)
+		handled = true
 	_refresh_buttons()
 	queue_redraw()
 	return handled
 
 
 func _mouse_pressed(at: Vector2) -> bool:
+	if _over_heal_button(at):
+		if not heal_button.disabled:
+			healed.emit()
+		return true
 	if attack_button.get_rect().has_point(at):
 		_mouse_attack = true
 		_refresh_buttons()
@@ -287,6 +305,10 @@ func _mouse_pressed(at: Vector2) -> bool:
 		_set_move(at)
 		return true
 	return false
+
+
+func _over_heal_button(at: Vector2) -> bool:
+	return is_instance_valid(heal_button) and heal_button.is_visible_in_tree() and heal_button.get_global_rect().has_point(get_global_transform() * at)
 
 
 func _mouse_released() -> bool:

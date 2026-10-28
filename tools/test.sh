@@ -5,3 +5,4 @@ cd "$PROJECT_ROOT"
 godot --headless --path "$PROJECT_ROOT" --import
 godot --headless --path "$PROJECT_ROOT" --script res://tests/test_3d.gd
 godot --headless --path "$PROJECT_ROOT" --script res://tests/test_action.gd
+godot --headless --path "$PROJECT_ROOT" --script res://tests/test_loot.gd

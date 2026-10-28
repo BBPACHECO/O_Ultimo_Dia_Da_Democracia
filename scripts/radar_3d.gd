@@ -1,4 +1,5 @@
 extends Control
+const Loot = preload("res://scripts/loot_catalog.gd")
 var player: Node3D
 var world: Node3D
 var mission: RefCounted
@@ -25,6 +26,12 @@ func _draw() -> void:
 	draw_line(Vector2(10, center.y), Vector2(size.x - 10, center.y), Color("38525b"), 5)
 	if not is_instance_valid(player) or not is_instance_valid(world):
 		return
+	for house: Dictionary in world.houses:
+		var at: Vector2 = _map(house["center"])
+		draw_rect(Rect2(at - Vector2(9, 7), Vector2(18, 14)), Color("7c9eac"), false, 1.5)
+	for point: Dictionary in Loot.POINTS:
+		if point["id"] not in mission.looted_ids:
+			draw_circle(_map(point["position"]), 2.0, Color("dfc393"))
 	for point: Dictionary in world.evidence_points:
 		if point["id"] not in mission.collected:
 			draw_circle(_map(point["position"]), 4.0, Color("efc47e"))

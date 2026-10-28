@@ -45,7 +45,7 @@ for index, line in enumerate(lines):
                 require(target is not None and target[1] == 'com.godot.game.GodotApp', 'alias aponta para atividade incorreta')
             break
 require(launcher is not None, 'sem atividade inicial exportada com MAIN/LAUNCHER')
-require("versionName='0.4.0'" in badging and "versionCode='5'" in badging, 'versão inesperada')
+require("versionName='0.5.0'" in badging and "versionCode='6'" in badging, 'versão inesperada')
 require('android.permission.INTERNET' not in permissions, 'permissão de internet presente')
 require('android.permission.ACCESS_NETWORK_STATE' not in permissions, 'permissão de rede presente')
 with zipfile.ZipFile(apk) as z:
@@ -56,7 +56,7 @@ with zipfile.ZipFile(apk) as z:
     remap = z.read('assets/scenes/third_person.tscn.remap').decode('utf-8')
     scene = re.search(r'path="res://([^"]+)"', remap)
     require(scene is not None and 'assets/' + scene[1] in names, 'cena compilada ausente')
-    for script in ['game_3d', 'city_world', 'player_3d', 'touch_controls', 'mission_state', 'radar_3d', 'enemy_guard', 'citizen_npc', 'dialogue_book', 'art_geometry']:
+    for script in ['game_3d', 'city_world', 'player_3d', 'touch_controls', 'mission_state', 'radar_3d', 'enemy_guard', 'citizen_npc', 'dialogue_book', 'art_geometry', 'loot_catalog', 'scavenge_props', 'house_interior']:
         require('assets/scripts/' + script + '.gdc' in names, 'módulo 3D ausente: ' + script)
     require('assets/data/story.json' in names, 'narrativa ausente')
     require('assets/assets/fonts/LICENSE-DejaVu.txt' in names, 'licença das fontes ausente')

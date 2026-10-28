@@ -1,7 +1,10 @@
 extends RefCounted
 ## Regras da missão e progresso offline. A interface e o mundo não vivem aqui.
 const DURATION: float = 300.0
-const SAVE_VERSION: int = 2
+const SAVE_VERSION: int = 3
+const Loot = preload("res://scripts/loot_catalog.gd")
+const MAX_SUPPLIES: int = 9
+const SUPPLY_HEAL: float = 35.0
 const ENEMY_IDS: Array[String] = ["g1", "g2", "g3"]
 const NPC_IDS: Array[String] = ["lia", "ines", "tomas"]
 var save_path: String = "user://mission_3d_v2.json"
@@ -15,6 +18,8 @@ var last_save_ok: bool = true
 var health: float = 100.0
 var defeated_ids: Array[String] = []
 var talked_ids: Array[String] = []
+var supplies: int = 0
+var looted_ids: Array[String] = []
 
 
 func start_new() -> void:
@@ -27,6 +32,27 @@ func start_new() -> void:
 	health = 100.0
 	defeated_ids.clear()
 	talked_ids.clear()
+	supplies = 0
+	looted_ids.clear()
+
+
+func collect_loot(id: String) -> bool:
+	if not outcome.is_empty() or health <= 0.0 or id in looted_ids or supplies >= MAX_SUPPLIES:
+		return false
+	for point: Dictionary in Loot.POINTS:
+		if point["id"] == id:
+			supplies = mini(MAX_SUPPLIES, supplies + int(point["amount"]))
+			looted_ids.append(id)
+			return true
+	return false
+
+
+func use_supplies() -> bool:
+	if not outcome.is_empty() or health <= 0.0 or health >= 100.0 or supplies <= 0:
+		return false
+	supplies -= 1
+	health = minf(100.0, health + SUPPLY_HEAL)
+	return true
 
 
 func take_damage(amount: float) -> bool:
@@ -76,6 +102,7 @@ func save_game() -> bool:
 		"version": SAVE_VERSION, "collected": collected, "elapsed": elapsed,
 		"alert": alert, "outcome": outcome,
 		"health": health, "defeated_ids": defeated_ids, "talked_ids": talked_ids,
+		"supplies": supplies, "looted_ids": looted_ids,
 		"position": [position.x, position.y, position.z],
 	}))
 	file.flush()
@@ -100,6 +127,8 @@ func load_game() -> bool:
 	health = float(data["health"])
 	defeated_ids.assign(data["defeated_ids"])
 	talked_ids.assign(data["talked_ids"])
+	supplies = int(data["supplies"])
+	looted_ids.assign(data["looted_ids"])
 	var p: Array = data["position"]
 	position = Vector3(float(p[0]), float(p[1]), float(p[2]))
 	last_save_ok = true
@@ -117,12 +146,25 @@ func _read_save() -> Dictionary:
 	var version: Variant = data.get("version")
 	if not _number(version) or float(version) != floorf(float(version)):
 		return {}
-	if (int(version) != 1 and int(version) != SAVE_VERSION) or not data.get("collected") is Array:
+	if int(version) < 1 or int(version) > SAVE_VERSION or not data.get("collected") is Array:
 		return {}
-	if data["version"] == 1:
+	if int(version) == 1:
 		data["health"] = 100.0
 		data["defeated_ids"] = []
 		data["talked_ids"] = []
+	if int(version) < 3:
+		data["supplies"] = 0
+		data["looted_ids"] = []
+	var saved_supplies: Variant = data.get("supplies")
+	if not _number(saved_supplies) or float(saved_supplies) != floorf(float(saved_supplies)):
+		return {}
+	if float(saved_supplies) < 0.0 or float(saved_supplies) > MAX_SUPPLIES:
+		return {}
+	var loot_ids: Array[String] = []
+	for point: Dictionary in Loot.POINTS:
+		loot_ids.append(String(point["id"]))
+	if not _valid_ids(data.get("looted_ids"), loot_ids):
+		return {}
 	if not _number(data.get("health")) or float(data["health"]) < 0.0 or float(data["health"]) > 100.0:
 		return {}
 	if not _valid_ids(data.get("defeated_ids"), ENEMY_IDS) or not _valid_ids(data.get("talked_ids"), NPC_IDS):

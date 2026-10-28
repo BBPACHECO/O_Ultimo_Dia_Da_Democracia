@@ -39,6 +39,8 @@ func _run() -> void:
 	game.set_graphics_quality("smooth", false)
 	await capture("01-inicio-3d.png")
 	game.start_mission()
+	await _capture_scavenging()
+	game.start_mission()
 	await capture("02-terceira-pessoa.png")
 	var lia: Node3D = game.citizens[0]
 	game.player.reset_player(lia.global_position + Vector3(0, 0.1, 1.8))
@@ -105,6 +107,35 @@ func _run() -> void:
 	game.queue_free()
 	await process_frame
 	quit(0)
+
+
+func _capture_scavenging() -> void:
+	for guard: Node3D in game.enemies:
+		guard.set_active(false)
+	game.player.reset_player(Vector3(2.8, 0.1, 22.2))
+	game._toast_time = 0.0
+	await capture("08-porta-malas.png")
+	game.interact()
+	if "car_praca" not in game.mission.looted_ids:
+		printerr("A captura não conseguiu abrir o porta-malas.")
+		quit(1)
+		return
+	game.player.reset_player(Vector3(-21, 0.1, 19.5))
+	game._toast_time = 0.0
+	await capture("09-casa-loot.png")
+	game.interact()
+	if "house_left_cupboard" not in game.mission.looted_ids:
+		printerr("A captura não conseguiu saquear a casa.")
+		quit(1)
+		return
+	game.player.reset_player(Vector3(-10.5, 0.1, 17))
+	game._toast_time = 0.0
+	await capture("10-corpo-loot.png")
+	game.interact()
+	if "body_praca" not in game.mission.looted_ids:
+		printerr("A captura não conseguiu revistar o corpo.")
+		quit(1)
+		return
 
 
 func _cleanup() -> void:
